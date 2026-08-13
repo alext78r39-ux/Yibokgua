@@ -41,21 +41,50 @@
 
 ## 建置與執行
 
-環境需求：
+### 環境需求
 
-- Android Studio（建議最新穩定版）
-- JDK 17+
-- Android SDK 35（`compileSdk = 35`，`minSdk = 26`）
+| 項目 | 版本 |
+| --- | --- |
+| Android Studio | 建議最新穩定版（Ladybug 以上） |
+| JDK | 17+（`jvmTarget = 17`） |
+| Android SDK | 35（`compileSdk = 35`，`minSdk = 26`，`targetSdk = 35`） |
+
+### 方式一：Android Studio（圖形介面）
+
+1. 開啟 Android Studio，選擇 **File ▸ Open**，選取本專案資料夾。
+2. 等待 Gradle **Sync** 完成（首次同步會下載依賴，需連網）。
+3. 建立模擬器（Tools ▸ Device Manager ▸ Create Virtual Device）或連接實體裝置（開啟 USB 偵錯）。
+4. 於工具列選擇 `app` 模組，按 **Run ▶** 安裝並啟動 App。
+
+### 方式二：命令列（Gradle）
 
 ```bash
-# 執行單元測試
+# 於專案根目錄執行（Windows 使用 gradlew.bat，macOS/Linux 使用 ./gradlew）
+
+# 1. 執行單元測試
 ./gradlew :app:testDebugUnitTest
 
-# 建置 Debug APK
+# 2. 建置 Debug APK
 ./gradlew :app:assembleDebug
+
+# 3. 建置 Release APK（未簽章，需自行設定 signingConfig）
+./gradlew :app:assembleRelease
+
+# 4. 安裝到已連接的裝置／模擬器
+./gradlew :app:installDebug
 ```
 
-> 注意：`gradle.properties` 預設使用 AGP 內建 AAPT2，若曾在 Linux 環境自訂 `android.aapt2FromMavenOverride` 請先移除，避免在 Windows 上無法建置。
+建置完成後，Debug APK 位於：
+
+```
+app/build/outputs/apk/debug/app-debug.apk
+```
+
+### 疑難排解
+
+- **AAPT2 無法執行**：`gradle.properties` 預設使用 AGP 內建 AAPT2，若曾在 Linux 環境自訂 `android.aapt2FromMavenOverride=/usr/bin/aapt2` 請務必移除，否則在 Windows 上會無法建置。
+- **Gradle 同步失敗**：確認 `local.properties` 中 `sdk.dir` 指向正確的 Android SDK 路徑。
+- **Java 版本不符**：確認使用 JDK 17+，可在 `File ▸ Project Structure ▸ SDK Location` 指定 JDK。
 
 ## 測試
 

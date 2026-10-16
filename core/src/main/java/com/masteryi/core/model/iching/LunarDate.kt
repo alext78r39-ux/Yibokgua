@@ -21,6 +21,10 @@ data class LunarDate(
     val ganZhiYear: String
         get() = GAN[((year - 4) % 10 + 10) % 10] + ZHI[((year - 4) % 12 + 12) % 12]
 
+    /** 年支序（子1 丑2 寅3 卯4 辰5 巳6 午7 未8 申9 酉10 戌11 亥12） */
+    val yearBranchNumber: Int
+        get() = ((year - 4) % 12 + 12) % 12 + 1
+
     /** 月名（含閏字，例：正月、閏六月） */
     val monthLabel: String
         get() = (if (isLeap) "閏" else "") + MONTH_NAMES[month - 1]

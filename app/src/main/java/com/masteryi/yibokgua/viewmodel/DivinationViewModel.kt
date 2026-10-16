@@ -45,9 +45,22 @@ class DivinationViewModel : ViewModel() {
 
     private var longPressJob: Job? = null
 
-    // 1. 時間起卦
+    // 1. 時間起卦（國曆）
     fun performTimeDivination(year: Int, month: Int, day: Int, hour: Int, minute: Int) {
         val result = engine.calculateTimeDivination(year, month, day, hour, minute)
+        setResult(result)
+    }
+
+    // 1b. 時間起卦（農曆・梅花易數）
+    fun performLunarTimeDivination(
+        yearBranchNum: Int,
+        lunarMonth: Int,
+        lunarDay: Int,
+        hourBranchNum: Int
+    ) {
+        val result = engine.calculateLunarTimeDivination(
+            yearBranchNum, lunarMonth, lunarDay, hourBranchNum
+        )
         setResult(result)
     }
 

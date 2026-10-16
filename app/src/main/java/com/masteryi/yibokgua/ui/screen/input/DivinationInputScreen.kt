@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.masteryi.core.model.iching.DivinationResult
 import com.masteryi.core.model.iching.Hexagram
+import com.masteryi.core.model.iching.LunarDate
 import com.masteryi.core.model.iching.TiYongAnalysis
 import com.masteryi.core.model.iching.Trigram
 import com.masteryi.core.model.iching.TrigramInfo
@@ -36,7 +37,9 @@ import com.masteryi.yibokgua.ui.components.TrigramPairSection
 import com.masteryi.yibokgua.ui.components.ZenCard
 import com.masteryi.yibokgua.ui.components.zenThinBorder
 import com.masteryi.yibokgua.viewmodel.DivinationViewModel
+import com.masteryi.engine.iching.EARTHLY_BRANCH_NAMES
 import com.masteryi.engine.iching.countChineseCharacters
+import com.masteryi.engine.iching.hourBranchNumber
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -93,7 +96,10 @@ fun DivinationInputScreen(
             when (selectedTabIndex) {
                 0 -> ManualShakeView(viewModel = viewModel)
                 1 -> QuickShakeView(viewModel = viewModel)
-                2 -> TimeDivinationView(onCalculate = viewModel::performTimeDivination)
+                2 -> TimeDivinationView(
+                    onCalculateSolar = viewModel::performTimeDivination,
+                    onCalculateLunar = viewModel::performLunarTimeDivination
+                )
                 3 -> CategoryDirectionView(onCalculate = viewModel::performCategoryDirectionDivination)
                 4 -> CharacterDivinationView(onCalculate = viewModel::performCharacterDivination)
             }
@@ -376,15 +382,14 @@ fun YaoDisplayBoard(yaos: List<Yao>, modifier: Modifier = Modifier) {
     }
 }
 
-/** 時間起卦介面（日期選擇器 + 24 小時制時間滾輪選擇） */
+/** 時間起卦介面：可切換「農曆（梅花易數）」與「國曆」兩種取數方式 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TimeDivinationView(onCalculate: (Int, Int, Int, Int, Int) -> Unit) {
-    var date by remember { mutableStateOf(LocalDate.now()) }
-    var showDatePicker by remember { mutableStateOf(false) }
-    var hour by remember { mutableIntStateOf(LocalTime.now().hour) }
-    var minute by remember { mutableIntStateOf(LocalTime.now().minute) }
-    var showTimePicker by remember { mutableStateOf(false) }
+fun TimeDivinationView(
+    onCalculateSolar: (Int, Int, Int, Int, Int) -> Unit,
+    onCalculateLunar: (Int, Int, Int, Int) -> Unit
+) {
+    var useLunar by rememberSaveable { mutableStateOf(true) }
 
     Column(
         modifier = Modifier
@@ -392,7 +397,132 @@ fun TimeDivinationView(onCalculate: (Int, Int, Int, Int, Int) -> Unit) {
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("請選擇日期與時間（梅花易數）：", style = MaterialTheme.typography.titleSmall)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = useLunar,
+                onClick = { useLunar = true },
+                label = { Text("農曆（梅花易數）") }
+            )
+            FilterChip(
+                selected = !useLunar,
+                onClick = { useLunar = false },
+                label = { Text("國曆") }
+            )
+        }
+
+        if (useLunar) {
+            LunarTimeDivinationForm(onCalculate = onCalculateLunar)
+        } else {
+            SolarTimeDivinationForm(onCalculate = onCalculateSolar)
+        }
+    }
+}
+
+/** 農曆時間起卦：輸入年支、農曆月、農曆日、時支 */
+@Composable
+private fun LunarTimeDivinationForm(onCalculate: (Int, Int, Int, Int) -> Unit) {
+    val todayLunar = remember { runCatching { LunarDate.of(LocalDate.now()) }.getOrNull() }
+    var yearBranch by remember { mutableIntStateOf(todayLunar?.yearBranchNumber ?: 1) }
+    var lunarMonth by remember { mutableIntStateOf(todayLunar?.month ?: 1) }
+    var lunarDay by remember { mutableIntStateOf(todayLunar?.day ?: 1) }
+    var hourBranch by remember { mutableIntStateOf(hourBranchNumber(LocalTime.now().hour)) }
+
+    Text("梅花易數以「年支、農曆月、農曆日、時支」取數：", style = MaterialTheme.typography.titleSmall)
+    Text(
+        text = "上卦＝(年支＋月＋日) mod 8；下卦＝(年支＋月＋日＋時支) mod 8；動爻＝同前 mod 6。",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+
+    DropdownSelector(
+        label = "年支",
+        value = "${EARTHLY_BRANCH_NAMES[yearBranch - 1]}（$yearBranch）",
+        options = EARTHLY_BRANCH_NAMES,
+        onSelect = { yearBranch = it + 1 }
+    )
+    DropdownSelector(
+        label = "農曆月",
+        value = "$lunarMonth 月",
+        options = (1..12).map { "$it 月" },
+        onSelect = { lunarMonth = it + 1 }
+    )
+    DropdownSelector(
+        label = "農曆日",
+        value = "$lunarDay 日",
+        options = (1..30).map { "$it 日" },
+        onSelect = { lunarDay = it + 1 }
+    )
+    DropdownSelector(
+        label = "時支",
+        value = "${EARTHLY_BRANCH_NAMES[hourBranch - 1]}（$hourBranch）",
+        options = EARTHLY_BRANCH_NAMES,
+        onSelect = { hourBranch = it + 1 }
+    )
+
+    Button(
+        onClick = { onCalculate(yearBranch, lunarMonth, lunarDay, hourBranch) },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text("梅花起卦")
+    }
+}
+
+/** 單一選項下拉欄位 */
+@Composable
+private fun DropdownSelector(
+    label: String,
+    value: String,
+    options: List<String>,
+    onSelect: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Box {
+            OutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(value)
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                options.forEachIndexed { index, option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = {
+                            onSelect(index)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** 國曆時間起卦：日期選擇器 + 24 小時制時間滾輪 */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SolarTimeDivinationForm(onCalculate: (Int, Int, Int, Int, Int) -> Unit) {
+    var date by remember { mutableStateOf(LocalDate.now()) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var hour by remember { mutableIntStateOf(LocalTime.now().hour) }
+    var minute by remember { mutableIntStateOf(LocalTime.now().minute) }
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("請選擇國曆日期與時間：", style = MaterialTheme.typography.titleSmall)
 
         // 日期選擇欄位
         ZenCard(
@@ -464,7 +594,7 @@ fun TimeDivinationView(onCalculate: (Int, Int, Int, Int, Int) -> Unit) {
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("梅花起卦")
+            Text("國曆起卦")
         }
     }
 

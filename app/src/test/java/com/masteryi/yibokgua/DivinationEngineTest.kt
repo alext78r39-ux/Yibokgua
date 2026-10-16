@@ -4,6 +4,7 @@ import com.masteryi.core.model.iching.Trigram
 import com.masteryi.core.model.iching.Yao
 import com.masteryi.data.repository.HexagramRepository
 import com.masteryi.engine.iching.DivinationEngine
+import com.masteryi.engine.iching.hourBranchNumber
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -34,10 +35,11 @@ class DivinationEngineTest {
         val counts = mutableMapOf<Yao, Int>()
         repeat(100_000) { counts.merge(engine.rollSingleYao(random), 1, Int::plus) }
         val tolerance = 0.01
-        assertEquals(0.12, counts[Yao.OLD_YIN]!! / 100_000.0, tolerance)
-        assertEquals(0.13, counts[Yao.OLD_YANG]!! / 100_000.0, tolerance)
-        assertEquals(0.37, counts[Yao.YOUNG_YANG]!! / 100_000.0, tolerance)
-        assertEquals(0.38, counts[Yao.YOUNG_YIN]!! / 100_000.0, tolerance)
+        // 傳統三錢法精確機率：老陰 1/8、少陽 3/8、少陰 3/8、老陽 1/8
+        assertEquals(0.125, counts[Yao.OLD_YIN]!! / 100_000.0, tolerance)
+        assertEquals(0.375, counts[Yao.YOUNG_YANG]!! / 100_000.0, tolerance)
+        assertEquals(0.375, counts[Yao.YOUNG_YIN]!! / 100_000.0, tolerance)
+        assertEquals(0.125, counts[Yao.OLD_YANG]!! / 100_000.0, tolerance)
     }
 
     @Test
@@ -78,6 +80,55 @@ class DivinationEngineTest {
         assertEquals(Trigram.fromBinary("010"), Trigram.KAN)
         assertEquals(Trigram.fromNumber(8), Trigram.KUN)
         assertEquals(Trigram.fromNumber(16), Trigram.KUN)
+    }
+
+    @Test
+    fun testLunarTimeDivinationUsesBranchAndLunarDate() {
+        // 年支子(1)、農曆正月(1)、初一(1)、時支子(1)
+        // 上卦 = mod8(1+1+1) = 3 離；下卦 = mod8(1+1+1+1) = 4 震 => 火雷噬嗑
+        // 動爻 = mod6(1+1+1+1) = 4（第四爻）
+        val result = engine.calculateLunarTimeDivination(
+            yearBranchNum = 1, lunarMonth = 1, lunarDay = 1, hourBranchNum = 1
+        )
+        assertEquals("火雷噬嗑", result.originalHexagram.name)
+        assertEquals(4, result.movingYaoIndex)
+        assertTrue(result.yaos[3].isMoving)
+        assertNotNull(result.mutatedHexagram)
+        assertEquals("時間起卦（農曆）", result.divinationType)
+    }
+
+    @Test
+    fun testLunarTimeDivinationZeroMapsToMax() {
+        // 年支子(1)、正月(1)、初六(6)、時支子(1)：1+1+6 = 8 => 上卦 mod8 = 8 坤
+        // 下卦 = mod8(8+1) = 1 乾 => 地天泰；動爻 = mod6(9) = 3（第三爻）
+        val result = engine.calculateLunarTimeDivination(
+            yearBranchNum = 1, lunarMonth = 1, lunarDay = 6, hourBranchNum = 1
+        )
+        assertEquals("地天泰", result.originalHexagram.name)
+        assertEquals(3, result.movingYaoIndex)
+    }
+
+    @Test
+    fun testLunarTimeDivinationAllTwelveBranchesValid() {
+        // 年支亥(12)、農曆十二月(12)、三十(30)、時支亥(12)：54 => 上卦 mod8 = 6 坎
+        // 下卦 = mod8(54+12) = mod8(66) = 2 兌 => 水澤節；動爻 = mod6(66) = 6（上爻）
+        val result = engine.calculateLunarTimeDivination(
+            yearBranchNum = 12, lunarMonth = 12, lunarDay = 30, hourBranchNum = 12
+        )
+        assertEquals("水澤節", result.originalHexagram.name)
+        assertEquals(6, result.movingYaoIndex)
+    }
+
+    @Test
+    fun testHourBranchNumberMapping() {
+        assertEquals(1, hourBranchNumber(23))  // 子時 23:00–00:59
+        assertEquals(1, hourBranchNumber(0))
+        assertEquals(2, hourBranchNumber(1))   // 丑時
+        assertEquals(2, hourBranchNumber(2))
+        assertEquals(3, hourBranchNumber(3))   // 寅時
+        assertEquals(7, hourBranchNumber(12))  // 午時
+        assertEquals(12, hourBranchNumber(21)) // 亥時
+        assertEquals(12, hourBranchNumber(22))
     }
 
     @Test

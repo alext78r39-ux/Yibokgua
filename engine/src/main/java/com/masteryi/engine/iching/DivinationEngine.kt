@@ -11,12 +11,23 @@ import kotlin.random.Random
 fun countChineseCharacters(text: String): Int =
     text.codePoints().filter { UnicodeScript.of(it) == UnicodeScript.HAN }.count().toInt()
 
+/** 十二地支名稱（索引 0 = 子 … 11 = 亥） */
+val EARTHLY_BRANCH_NAMES: List<String> =
+    listOf("子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥")
+
+/** 由 24 小時制時數求時支序（子1 丑2 … 亥12）；子時跨 23:00–00:59 */
+fun hourBranchNumber(hour: Int): Int = ((hour + 1) / 2) % 12 + 1
+
 class DivinationEngine(
     private val findHexagramByBinary: (String) -> Hexagram
 ) {
 
     /**
-     * 1. 時間起卦（梅花易數）
+     * 1. 時間起卦（國曆）
+     * 以國曆年月日時分取數（非傳統梅花曆法，保留供對照）：
+     * - 上卦 = (年 + 月 + 日) mod 8
+     * - 下卦 = (時 + 分) mod 8
+     * - 動爻 = (年 + 月 + 日 + 時 + 分) mod 6
      */
     fun calculateTimeDivination(
         year: Int, month: Int, day: Int, hour: Int, minute: Int
@@ -24,49 +35,51 @@ class DivinationEngine(
         val upperNum = mod8(year + month + day)
         val lowerNum = mod8(hour + minute)
         val movingYaoNum = mod6(year + month + day + hour + minute)
-
-        val upperTrigram = Trigram.fromNumber(upperNum)
-        val lowerTrigram = Trigram.fromNumber(lowerNum)
-
-        // 組合 binary (下卦 3 位 + 上卦 3 位)
-        val originalBinary = lowerTrigram.binaryCode + upperTrigram.binaryCode
-        val originalHexagram = findHexagramByBinary(originalBinary)
-
-        // 建構 6 爻列表
-        val yaos = originalBinary.mapIndexed { index, char ->
-            val isYang = char == '1'
-            val yaoIndex1Based = index + 1
-            if (yaoIndex1Based == movingYaoNum) {
-                if (isYang) Yao.OLD_YANG else Yao.OLD_YIN
-            } else {
-                if (isYang) Yao.YOUNG_YANG else Yao.YOUNG_YIN
-            }
-        }
-
-        // 變卦 binary
-        val mutatedBinary = yaos.joinToString("") { if (it.mutate().isYang) "1" else "0" }
-        val mutatedHexagram = findHexagramByBinary(mutatedBinary)
-
-        return DivinationResult(
-            originalHexagram = originalHexagram,
-            mutatedHexagram = mutatedHexagram,
-            yaos = yaos,
-            movingYaoIndex = movingYaoNum,
-            divinationType = "時間起卦（梅花易數）"
-        )
+        return buildDivinationFromNums(upperNum, lowerNum, movingYaoNum, "時間起卦（國曆）")
     }
 
     /**
-     * 2. 搖一爻（三錢法機率引擎）
-     * 機率：老陰 12%、老陽 13%、少陽 37%、少陰 38%
+     * 1b. 時間起卦（農曆・梅花易數）
+     * 傳統取數以「年支、農曆月、農曆日、時支」為準：
+     * - 上卦 = (年支 + 農曆月 + 農曆日) mod 8
+     * - 下卦 = (年支 + 農曆月 + 農曆日 + 時支) mod 8
+     * - 動爻 = (年支 + 農曆月 + 農曆日 + 時支) mod 6
+     * 地支序：子1 丑2 寅3 卯4 辰5 巳6 午7 未8 申9 酉10 戌11 亥12
+     */
+    fun calculateLunarTimeDivination(
+        yearBranchNum: Int,
+        lunarMonth: Int,
+        lunarDay: Int,
+        hourBranchNum: Int
+    ): DivinationResult {
+        require(yearBranchNum in 1..12) { "年支序必須在 1~12" }
+        require(lunarMonth in 1..12) { "農曆月必須在 1~12" }
+        require(lunarDay in 1..30) { "農曆日必須在 1~30" }
+        require(hourBranchNum in 1..12) { "時支序必須在 1~12" }
+
+        val base = yearBranchNum + lunarMonth + lunarDay
+        val upperNum = mod8(base)
+        val lowerNum = mod8(base + hourBranchNum)
+        val movingYaoNum = mod6(base + hourBranchNum)
+        return buildDivinationFromNums(upperNum, lowerNum, movingYaoNum, "時間起卦（農曆）")
+    }
+
+    /**
+     * 2. 搖一爻（三錢法）
+     * 依傳統三錢法：每枚銅錢擲得「陽面 3」或「陰面 2」，三枚之和決定該爻：
+     * - 6（陰陰陰）老陰，機率 1/8 = 12.5%
+     * - 7（陰陰陽）少陽，機率 3/8 = 37.5%
+     * - 8（陰陽陽）少陰，機率 3/8 = 37.5%
+     * - 9（陽陽陽）老陽，機率 1/8 = 12.5%
      */
     fun rollSingleYao(random: Random = Random.Default): Yao {
-        val rand = random.nextInt(100) // 0 .. 99
-        return when {
-            rand < 12 -> Yao.OLD_YIN        // 0..11 (12%)
-            rand < 25 -> Yao.OLD_YANG       // 12..24 (13%)
-            rand < 62 -> Yao.YOUNG_YANG     // 25..61 (37%)
-            else -> Yao.YOUNG_YIN           // 62..99 (38%)
+        var sum = 0
+        repeat(3) { sum += if (random.nextBoolean()) 3 else 2 }
+        return when (sum) {
+            6 -> Yao.OLD_YIN        // 1/8
+            7 -> Yao.YOUNG_YANG     // 3/8
+            8 -> Yao.YOUNG_YIN      // 3/8
+            else -> Yao.OLD_YANG    // 9 -> 1/8
         }
     }
 

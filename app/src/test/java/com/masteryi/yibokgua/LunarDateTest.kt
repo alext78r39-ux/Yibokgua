@@ -52,4 +52,18 @@ class LunarDateTest {
         val lunar = LunarDate.of(LocalDate.of(2025, 10, 6))
         assertEquals("乙巳年八月十五", lunar.text)
     }
+
+    @Test
+    fun yearBranchNumber_丙午年為午() {
+        // 2026-02-17 = 丙午年正月初一，午為第 7 支
+        val lunar = LunarDate.of(LocalDate.of(2026, 2, 17))
+        assertEquals(7, lunar.yearBranchNumber)
+    }
+
+    @Test
+    fun yearBranchNumber_乙巳年為巳() {
+        // 2025-01-29 = 乙巳年正月初一，巳為第 6 支
+        val lunar = LunarDate.of(LocalDate.of(2025, 1, 29))
+        assertEquals(6, lunar.yearBranchNumber)
+    }
 }

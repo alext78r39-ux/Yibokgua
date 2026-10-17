@@ -1,6 +1,6 @@
 # AGENTS.md
 
-易經卜卦 Android app (一卜卦 / Yibokgua). Kotlin + Jetpack Compose, 4-module Gradle build. No CI, no existing instruction files.
+易經卜卦 Android app (易卜卦 / Yibokgua). Kotlin + Jetpack Compose, 4-module Gradle build. No CI, no existing instruction files.
 
 ## Build & verify
 - JDK 17. Android SDK path comes from the gitignored `local.properties` (`sdk.dir=/opt/android_sdk`); recreate it if a fresh clone lacks it.
@@ -33,10 +33,11 @@ One-way deps; keep domain logic in its module, not in `:app`:
 - Tests assume `HexagramRepository` holds exactly 64 unique hexagrams.
 
 ## State & persistence
-- DataStore only, never SharedPreferences. Two stores: `yibokgua_settings` (`SettingsRepository`) and `yibokgua_reader` (`ReaderSettingsRepository`).
-- `DivinationViewModel.historyList` is **in-memory only** — lost on process death. (README overstates this as persisted history.)
+- DataStore only, never SharedPreferences. Three stores: `yibokgua_settings` (`SettingsRepository`), `yibokgua_reader` (`ReaderSettingsRepository`), and `yibokgua_library` (`BookLibraryRepository`, key `books`).
+- `DivinationViewModel.historyList` is **in-memory only** — lost on process death; capped at `MAX_HISTORY = 200`. (README overstates this as persisted history.)
 - ViewModels via `by viewModels()`: `DivinationViewModel` is a plain `ViewModel`; `SettingsViewModel` / `ReaderViewModel` are `AndroidViewModel`.
-- Reader imports `.txt` via SAF `OpenDocument` and auto-detects BOM / UTF-8 / UTF-16 / GB18030.
+- Reader (`ui/screen/reader/`): supports PDF, DOC/DOCX, MD, TXT. Batch import via SAF `OpenMultipleDocuments`; imported files are **copied** to `filesDir/books/<id>.<ext>` (`BookLibraryRepository.import`), metadata serialized into the `yibokgua_library` DataStore via `Book.encode/decode`. Reading positions stored as `Book.progress` (0..1).
+- Reader format parsing (kept in `:app`, no third-party libs): `TextDecoder` (BOM / UTF-8 strict / UTF-16 / GB18030), `MarkdownParser`, `DocxExtractor` (`java.util.zip` + regex on `word/document.xml`), `DocExtractor` (best-effort binary `.doc`), `PdfHelper` (Android `PdfRenderer`, per-page lazy render), orchestrated by `DocumentParser`. Pure logic in these classes is unit-tested from `app/src/test`.
 
 ## UI conventions
 - All user-facing strings and code comments are Traditional Chinese (zh-TW). Match it; do not add English UI strings.

@@ -62,4 +62,13 @@ class ReaderSettingsRepository(private val context: Context) {
     suspend fun setContentPaddingDp(value: Float) {
         context.readerDataStore.edit { it[Keys.CONTENT_PADDING] = value }
     }
+
+    suspend fun reset() {
+        context.readerDataStore.edit {
+            it.remove(Keys.FONT_SIZE)
+            it.remove(Keys.LINE_HEIGHT)
+            it.remove(Keys.PARAGRAPH_SPACING)
+            it.remove(Keys.CONTENT_PADDING)
+        }
+    }
 }

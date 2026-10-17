@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -37,8 +38,8 @@ fun SettingsScreen(
     settingsViewModel: SettingsViewModel,
     readerViewModel: ReaderViewModel
 ) {
-    val settings by settingsViewModel.settings.collectAsState()
-    val readerSettings by readerViewModel.settings.collectAsState()
+    val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
+    val readerSettings by readerViewModel.settings.collectAsStateWithLifecycle()
     var showUsage by rememberSaveable { mutableStateOf(false) }
     var showAbout by rememberSaveable { mutableStateOf(false) }
     var showLegal by rememberSaveable { mutableStateOf(false) }
@@ -177,7 +178,10 @@ fun SettingsScreen(
             SettingRow(
                 title = "重置設定",
                 subtitle = "將所有設定還原為預設值",
-                onClick = { settingsViewModel.reset() }
+                onClick = {
+                    settingsViewModel.reset()
+                    readerViewModel.resetSettings()
+                }
             )
         }
 
@@ -533,7 +537,8 @@ private val USAGE_TEXT = """
 查看本次應用內搖卦的卦象紀錄。
 
 【書籍】
-內建純文字閱讀器，點「匯入」選擇 .txt 檔案即可閱讀。閱讀時點擊畫面中央可顯示或隱藏工具列，並可即時調整字級與行距。
+內建文件閱讀器，支援 PDF、DOC/DOCX（Word）、Markdown（.md）與純文字（.txt）。點「匯入」可一次選取多個檔案，書架會記錄每本書的閱讀進度。
+閱讀時點擊畫面中央可顯示或隱藏工具列，並可即時調整字級與行距；PDF 以逐頁方式顯示。長按書卡右上角可刪除書本。
 
 【設定】
 可切換主題模式（跟隨系統／淺色／深色）、動態取色，並可調整閱讀字級、行距與段落間距，亦可重置所有設定。

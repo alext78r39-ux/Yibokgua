@@ -1,4 +1,4 @@
-# 一卜卦 (Yibokgua)
+# 易卜卦 (Yibokgua)
 
 一個以 Kotlin + Jetpack Compose 開發的易經卜卦 Android 應用，支援梅花易數與多種起卦方式、卦象解析、歷史紀錄與詳情卡片導出。
 
@@ -35,11 +35,20 @@
 - 本卦、變卦、動爻、六爻明細、體用生克、旺衰推斷。
 - 首頁可輸入「所占之事」，起卦時自動帶入。
 - 卦象查詢頁（六十四卦檢視）。
-- 歷史紀錄：儲存起卦記錄，可查看詳情、導出詳情卡片。
+- 歷史紀錄：暫存於記憶體（最多 200 筆，結束行程後清空），可查看詳情、導出詳情卡片。
 
 ### 詳情卡片導出
 
-`DetailCardExport.kt` 以 Compose 離線渲染 PNG（設計寬 360dp），透過 `FileProvider` 以系統分享介面送出。
+`DetailCardExport.kt` 以 Compose 離線渲染 PNG（設計寬 360dp）。因 Compose 需附加至視窗才能建立 composition，實作會先將透明的 `ComposeView` 掛上 Activity 內容根，待首帧完成後以不受高度限制的規格量測、繪製再移除；PNG 透過 `FileProvider` 以系統分享介面送出。
+
+### 書籍閱讀器（「書籍」頁）
+
+- **支援格式**：PDF、DOC/DOCX（Word）、Markdown（`.md`）、純文字（`.txt`，自動判讀 UTF-8／UTF-16／GB18030 與 BOM）。
+- **批量匯入**：一次選取多個檔案，內容複製至 App 內部儲存（`filesDir/books/`），原檔刪除後仍可閱讀。
+- **書架**：卡片式清單、格式標籤、閱讀進度、刪除。
+- **閱讀**：點擊畫面中央切換工具列；可即時調整字級與行距；PDF 以內建 `PdfRenderer` 逐頁延遲渲染。
+- **實作**：`.docx` 以 `java.util.zip` 解析 `word/document.xml`；`.doc` 為盡力擷取純文字；Markdown 為自製輕量解析；全部不引入第三方函式庫。
+- **儲存**：書本中繼資料以 DataStore（`yibokgua_library`）保存，未使用 SharedPreferences。
 
 ### 設定
 
@@ -86,7 +95,8 @@ app/src/main/java/com/masteryi/yibokgua/
 │   ├── screen/
 │   │   ├── home/                # HomeScreen, HistoryScreen, SettingsScreen
 │   │   ├── input/               # DivinationInputScreen（五種起卦介面）
-│   │   └── query/               # HexagramQueryScreen（卦象查詢）
+│   │   ├── query/               # HexagramQueryScreen（卦象查詢）
+│   │   └── reader/              # 書籍閱讀器（書架、閱讀、格式解析）
 │   ├── export/DetailCardExport.kt
 │   └── components/, theme/
 core/src/main/java/com/masteryi/core/model/iching/

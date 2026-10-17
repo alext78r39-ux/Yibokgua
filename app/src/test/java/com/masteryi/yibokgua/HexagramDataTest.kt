@@ -102,6 +102,17 @@ class HexagramDataTest {
     }
 
     @Test
+    fun testHuHexagramFollowsLowerFirstBinaryConvention() {
+        // 山火賁 (101001)：下互坎(010)、上互震(100) => 互卦為雷水解（第 40 卦）
+        val ben = repository.getHexagramById(22)!!
+        assertEquals("互卦應符合「下卦在前」慣例", 40, ben.huHexagram?.id)
+        // 乾為天：互卦仍為乾
+        assertEquals(1, repository.getHexagramById(1)!!.huHexagram?.id)
+        // 坤為地：互卦仍為坤
+        assertEquals(2, repository.getHexagramById(2)!!.huHexagram?.id)
+    }
+
+    @Test
     fun testKeyHexagramSymbols() {
         val expected = mapOf(
             1 to "䷀", 2 to "䷁", 11 to "䷊", 29 to "䷜", 30 to "䷝",

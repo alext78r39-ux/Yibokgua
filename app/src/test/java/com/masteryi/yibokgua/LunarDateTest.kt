@@ -48,6 +48,28 @@ class LunarDateTest {
     }
 
     @Test
+    fun of_閏六月之後為平七月() {
+        // 2025-08-23 = 乙巳年七月初一（閏六月結束後的第一天，不可標為閏七月）
+        val lunar = LunarDate.of(LocalDate.of(2025, 8, 23))
+        assertEquals(2025, lunar.year)
+        assertEquals(7, lunar.month)
+        assertEquals(false, lunar.isLeap)
+        assertEquals(1, lunar.day)
+        assertEquals("乙巳年七月初一", lunar.text)
+    }
+
+    @Test
+    fun of_超出支援範圍擲出例外() {
+        // 2100 年之後（無內建曆表）應以例外拒絕，而非陣列越界
+        try {
+            LunarDate.of(LocalDate.of(2101, 12, 31))
+            throw AssertionError("應擲出 IllegalArgumentException")
+        } catch (expected: IllegalArgumentException) {
+            // 預期
+        }
+    }
+
+    @Test
     fun of_2025中秋() {
         val lunar = LunarDate.of(LocalDate.of(2025, 10, 6))
         assertEquals("乙巳年八月十五", lunar.text)

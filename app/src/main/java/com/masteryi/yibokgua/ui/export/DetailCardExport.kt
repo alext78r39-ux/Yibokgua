@@ -1,10 +1,14 @@
 package com.masteryi.yibokgua.ui.export
 
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.view.View
+import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -52,33 +56,56 @@ fun shareDetailCardAsImage(
     result: DivinationResult,
     tiYongAnalysis: TiYongAnalysis?
 ) {
-    try {
-        val bitmap = renderDetailCardToBitmap(context, result, tiYongAnalysis)
-        val dir = File(context.cacheDir, "export").apply { mkdirs() }
-        val file = File(dir, "divination_${result.timestamp}.png")
-        file.outputStream().buffered().use { out ->
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-        }
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-        val sendIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "image/png"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        context.startActivity(Intent.createChooser(sendIntent, "導出詳情卡片"))
-    } catch (e: Exception) {
-        Toast.makeText(context, "導出失敗：${e.message}", Toast.LENGTH_SHORT).show()
+    val activity = context.findActivity()
+    val root = activity?.findViewById<ViewGroup>(android.R.id.content)
+    if (activity == null || root == null) {
+        Toast.makeText(context, "導出失敗：找不到可用的畫面", Toast.LENGTH_SHORT).show()
+        return
     }
+
+    renderDetailCardToBitmap(activity, root, result, tiYongAnalysis) { bitmap ->
+        try {
+            val dir = File(activity.cacheDir, "export").apply { mkdirs() }
+            val file = File(dir, "divination_${result.timestamp}.png")
+            file.outputStream().buffered().use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+            val uri = FileProvider.getUriForFile(activity, "${activity.packageName}.fileprovider", file)
+            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "image/png"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            activity.startActivity(Intent.createChooser(sendIntent, "導出詳情卡片"))
+        } catch (e: Exception) {
+            Toast.makeText(activity, "導出失敗：${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
+private fun Context.findActivity(): Activity? {
+    var ctx: Context? = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }
 
 /**
  * 將內容以指定設計倍率離線渲染為點陣圖（寬 360dp × 密度 3 = 1080px，高度依內容自動延展）。
+ *
+ * Compose 需附加至視窗才能建立 composition，故先將透明的 ComposeView 掛到 Activity
+ * 內容根檢視，待第一帧完成合成與佈局後，再以不受高度限制的規格重新量測並繪製，
+ * 最後移除該檢視。結果透過 [onReady] 非同步回傳。
  */
-fun renderDetailCardToBitmap(
+private fun renderDetailCardToBitmap(
     context: Context,
+    root: ViewGroup,
     result: DivinationResult,
-    tiYongAnalysis: TiYongAnalysis?
-): Bitmap {
+    tiYongAnalysis: TiYongAnalysis?,
+    onReady: (Bitmap) -> Unit
+) {
     val density = 3f
     val cardWidthPx = (360 * density).toInt()
 
@@ -96,17 +123,39 @@ fun renderDetailCardToBitmap(
                 }
             }
         }
+        alpha = 0f
     }
 
-    composeView.measure(
-        View.MeasureSpec.makeMeasureSpec(cardWidthPx, View.MeasureSpec.EXACTLY),
-        View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+    root.addView(
+        composeView,
+        ViewGroup.LayoutParams(cardWidthPx, ViewGroup.LayoutParams.WRAP_CONTENT)
     )
-    val heightPx = composeView.measuredHeight
-    val bitmap = Bitmap.createBitmap(cardWidthPx, heightPx, Bitmap.Config.ARGB_8888)
-    composeView.layout(0, 0, cardWidthPx, heightPx)
-    composeView.draw(Canvas(bitmap))
-    return bitmap
+
+    composeView.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+        override fun onPreDraw(): Boolean {
+            // 等待 composition 完成並完成首次佈局
+            if (composeView.height <= 0) return true
+            composeView.viewTreeObserver.removeOnPreDrawListener(this)
+            val bitmap = runCatching {
+                composeView.measure(
+                    View.MeasureSpec.makeMeasureSpec(cardWidthPx, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+                )
+                val heightPx = composeView.measuredHeight
+                composeView.layout(0, 0, cardWidthPx, heightPx)
+                Bitmap.createBitmap(cardWidthPx, heightPx, Bitmap.Config.ARGB_8888).also {
+                    composeView.draw(Canvas(it))
+                }
+            }.getOrNull()
+            root.removeView(composeView)
+            if (bitmap != null) {
+                onReady(bitmap)
+            } else {
+                Toast.makeText(context, "導出失敗：無法產生圖片", Toast.LENGTH_SHORT).show()
+            }
+            return true
+        }
+    })
 }
 
 /** 導出用詳情卡片版面（固定為淺色主題，確保輸出一致） */

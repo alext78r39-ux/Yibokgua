@@ -119,6 +119,7 @@ data class LunarDate(
                 offset += yearDays
                 year--
             }
+            require(year <= 2100) { "僅支援 2100 年（含）之前的日期" }
 
             // 定位農曆月份（含閏月）與日期
             val leapM = leapMonth(year)
@@ -137,10 +138,14 @@ data class LunarDate(
                 offset -= monthDays
                 month++
             }
-            // 恰好落於閏月月首的邊界校正
-            if (offset == 0 && leapM > 0 && month == leapM + 1 && !isLeap) {
-                month--
-                isLeap = true
+            // 邊界校正：偏移恰好落於月首時，需還原所屬月份（含閏月與其後一個月）
+            if (offset == 0 && leapM > 0 && month == leapM + 1) {
+                if (isLeap) {
+                    isLeap = false
+                } else {
+                    month--
+                    isLeap = true
+                }
             }
             if (offset < 0) {
                 offset += monthDays

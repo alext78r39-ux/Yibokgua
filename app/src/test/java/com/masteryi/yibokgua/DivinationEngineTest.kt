@@ -140,4 +140,13 @@ class DivinationEngineTest {
         // 第二爻陽變陰 => 101111 = 天火同人
         assertEquals("天火同人", result.mutatedHexagram!!.name)
     }
+
+    @Test
+    fun testCategoryDirectionNegativeInputDoesNotCrash() {
+        // 負數輸入應正規化為 1..8 / 1..6，而非拋出例外
+        val result = engine.calculateCategoryDirectionDivination(categoryNum = -1, directionNum = -1)
+        // mod8(-1) = 7（艮）=> 艮為山；mod6(-2) = 4
+        assertEquals("艮為山", result.originalHexagram.name)
+        assertEquals(4, result.movingYaoIndex)
+    }
 }

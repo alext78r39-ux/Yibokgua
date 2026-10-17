@@ -255,7 +255,7 @@ class DivinationEngine(
     private fun mod6(n: Int): Int = valRem(n, 6)
 
     private fun valRem(n: Int, mod: Int): Int {
-        val r = n % mod
+        val r = ((n % mod) + mod) % mod
         return if (r == 0) mod else r
     }
 }

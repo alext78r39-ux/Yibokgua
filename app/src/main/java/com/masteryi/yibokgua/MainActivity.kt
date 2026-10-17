@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,9 +56,9 @@ class MainActivity : ComponentActivity() {
                 fontSizeScale = settings.fontSizeScale,
                 colorPreset = settings.colorPreset
             ) {
-                var currentTab by remember { mutableIntStateOf(0) }
-                var pendingDetailId by remember { mutableStateOf<Int?>(null) }
-                var pendingDivinationTab by remember { mutableStateOf<Int?>(null) }
+                var currentTab by rememberSaveable { mutableIntStateOf(0) }
+                var pendingDetailId by rememberSaveable { mutableStateOf<Int?>(null) }
+                var pendingDivinationTab by rememberSaveable { mutableStateOf<Int?>(null) }
 
                 val isWide = LocalConfiguration.current.screenWidthDp >= 600
 
@@ -157,7 +158,10 @@ private fun MainScreenContent(
                     autoOpenId = pendingDetailId,
                     onAutoOpenConsumed = onAutoOpenConsumed
                 )
-                3 -> HistoryScreen(viewModel = viewModel)
+                3 -> HistoryScreen(
+                    viewModel = viewModel,
+                    onNavigateToDetail = onNavigateToDetail
+                )
                 4 -> SettingsScreen(
                     settingsViewModel = settingsViewModel,
                     readerViewModel = readerViewModel

@@ -21,7 +21,8 @@ class HexagramRepository {
                 val zong = h.binaryCode.reversed()
                 val huLower = h.binaryCode.substring(1, 4) // 爻 2~4
                 val huUpper = h.binaryCode.substring(2, 5) // 爻 3~5
-                val hu = "$huUpper$huLower"
+                // binaryCode 為「下卦在前」，故互卦亦須下互在前、上互在後
+                val hu = "$huLower$huUpper"
                 val bian = (0..5).mapNotNull { i ->
                     val chars = h.binaryCode.toCharArray()
                     chars[i] = if (chars[i] == '1') '0' else '1'

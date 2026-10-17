@@ -6,12 +6,14 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -19,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -36,6 +39,7 @@ import com.masteryi.yibokgua.ui.components.TrigramInfoDialog
 import com.masteryi.yibokgua.ui.components.TrigramPairSection
 import com.masteryi.yibokgua.ui.components.ZenCard
 import com.masteryi.yibokgua.ui.components.zenThinBorder
+import com.masteryi.yibokgua.ui.theme.LocalKeyboardScale
 import com.masteryi.yibokgua.viewmodel.DivinationViewModel
 import com.masteryi.engine.iching.EARTHLY_BRANCH_NAMES
 import com.masteryi.engine.iching.countChineseCharacters
@@ -43,7 +47,7 @@ import com.masteryi.engine.iching.hourBranchNumber
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 /** 全局統一細框線樣式（隨主題自適應） */
@@ -60,8 +64,8 @@ fun DivinationInputScreen(
     requestedTabIndex: Int? = null,
     onRequestedTabConsumed: () -> Unit = {}
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
     val tabs = listOf("手動", "快速", "日期", "類象", "字占")
 
     LaunchedEffect(requestedTabIndex) {
@@ -122,7 +126,7 @@ fun DivinationInputScreen(
 /** 手動搖卦 - 太極圖長按元件（依可用空間自適應尺寸，空間不足時自動改為捲動佈局） */
 @Composable
 fun ManualShakeView(viewModel: DivinationViewModel) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var started by remember { mutableStateOf(false) }
 
     if (!started) {
@@ -141,7 +145,8 @@ fun ManualShakeView(viewModel: DivinationViewModel) {
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isCompact = maxHeight < 460.dp
-        val taijiSize = minOf(160.dp, maxWidth * 0.5f, maxHeight * 0.40f).coerceAtLeast(96.dp)
+        val keyboardScale = LocalKeyboardScale.current
+        val taijiSize = minOf(160.dp * keyboardScale, maxWidth * 0.5f, maxHeight * 0.40f).coerceAtLeast(96.dp)
 
         AutoShakeLayout(
             isCompact = isCompact,
@@ -284,8 +289,9 @@ private fun ShakeStartPrompt(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        val keyboardScale = LocalKeyboardScale.current
         if (showTaiji) {
-            TaijiArtwork(modifier = Modifier.size(160.dp))
+            TaijiArtwork(modifier = Modifier.size(160.dp * keyboardScale))
             Spacer(modifier = Modifier.height(28.dp))
         }
         Text(
@@ -309,7 +315,7 @@ private fun ShakeStartPrompt(
             onClick = onStart,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
+                .height(52.dp * keyboardScale)
         ) {
             Text("開始", style = MaterialTheme.typography.titleMedium)
         }
@@ -600,14 +606,15 @@ private fun SolarTimeDivinationForm(onCalculate: (Int, Int, Int, Int, Int) -> Un
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            // Material3 DatePicker 以 UTC 表示日期，須以 UTC 轉換以避免時區造成的位移
+            initialSelectedDateMillis = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let { millis ->
-                        date = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                        date = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
                     }
                     showDatePicker = false
                 }) { Text("確定") }
@@ -660,7 +667,7 @@ private fun SolarTimeDivinationForm(onCalculate: (Int, Int, Int, Int, Int) -> Un
 /** 快速起卦介面：一鍵直接生成六個爻 */
 @Composable
 fun QuickShakeView(viewModel: DivinationViewModel) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var started by remember { mutableStateOf(false) }
 
     if (!started) {
@@ -760,19 +767,45 @@ fun CharacterDivinationView(onCalculate: (String) -> Boolean) {
 fun CategoryDirectionView(onCalculate: (Int, Int) -> Unit) {
     var categoryNum by remember { mutableStateOf("") }
     var directionNum by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("類象加方位起卦：")
-        OutlinedTextField(value = categoryNum, onValueChange = { categoryNum = it }, label = { Text("物象/觀察數") })
-        OutlinedTextField(value = directionNum, onValueChange = { directionNum = it }, label = { Text("方位數") })
+        OutlinedTextField(
+            value = categoryNum,
+            onValueChange = { categoryNum = it; error = null },
+            label = { Text("物象/觀察數") },
+            isError = error != null,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = directionNum,
+            onValueChange = { directionNum = it; error = null },
+            label = { Text("方位數") },
+            isError = error != null,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
+        )
+        error?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
         Button(
             onClick = {
-                val c = categoryNum.toIntOrNull() ?: 1
-                val d = directionNum.toIntOrNull() ?: 1
-                onCalculate(c, d)
+                val c = categoryNum.trim().toIntOrNull()
+                val d = directionNum.trim().toIntOrNull()
+                if (c == null || d == null || c <= 0 || d <= 0) {
+                    error = "請輸入 1 以上的正整數"
+                } else {
+                    onCalculate(c, d)
+                }
             },
             modifier = Modifier.fillMaxWidth()
         ) {

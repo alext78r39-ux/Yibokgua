@@ -40,6 +40,11 @@ class DivinationViewModel : ViewModel() {
     private val engine = DivinationEngine(findHexagramByBinary = repository::getHexagramByBinary)
     private val tiYongAnalyzer = TiYongAnalyzer(findHexagramByBinary = repository::getHexagramByBinary)
 
+    private companion object {
+        // 歷史紀錄僅存於記憶體，設定上限避免長時間使用造成記憶體膨脹
+        const val MAX_HISTORY = 200
+    }
+
     private val _uiState = MutableStateFlow(DivinationUiState())
     val uiState: StateFlow<DivinationUiState> = _uiState.asStateFlow()
 
@@ -148,7 +153,7 @@ class DivinationViewModel : ViewModel() {
             it.copy(
                 result = withQuestion,
                 tiYongAnalysis = tiYongAnalyzer.analyze(withQuestion),
-                historyList = listOf(withQuestion) + it.historyList
+                historyList = (listOf(withQuestion) + it.historyList).take(MAX_HISTORY)
             )
         }
     }

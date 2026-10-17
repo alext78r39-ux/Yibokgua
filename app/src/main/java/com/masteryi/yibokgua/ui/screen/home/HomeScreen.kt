@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,7 +68,7 @@ fun HomeScreen(
 ) {
     var selectedTrigram by remember { mutableStateOf<Trigram?>(null) }
     var dialogInfo by remember { mutableStateOf<TrigramInfo?>(null) }
-    val lunarToday = remember { LunarDate.of(LocalDate.now()) }
+    val lunarToday = remember { runCatching { LunarDate.of(LocalDate.now()) }.getOrNull() }
 
     AdaptiveScreen {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -81,7 +82,7 @@ fun HomeScreen(
             ) {
                 Spacer(Modifier.statusBarsPadding())
 
-                HomeHeader(lunarLabel = lunarToday.text, space = space)
+                HomeHeader(lunarLabel = lunarToday?.text.orEmpty(), space = space)
 
                 Spacer(Modifier.height(space.sectionSpacing))
 
@@ -129,7 +130,7 @@ private fun QuestionInputBar(
     modifier: Modifier = Modifier
 ) {
     var questionInput by rememberSaveable { mutableStateOf("") }
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState.question) {
         if (uiState.question.isNotEmpty()) questionInput = uiState.question
@@ -155,7 +156,8 @@ private fun QuestionInputBar(
             )
             Button(
                 onClick = {
-                    if (questionInput.isNotBlank()) viewModel.setQuestion(questionInput)
+                    // 清空輸入框亦會清除所占之事，避免舊問題殘留到之後的起卦
+                    viewModel.setQuestion(questionInput.trim())
                     onConfirm()
                 }
             ) {

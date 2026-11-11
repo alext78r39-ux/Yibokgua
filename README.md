@@ -54,6 +54,10 @@
 
 主題（亮／暗／動態色彩）、字級、色彩預設、邊框寬度、鍵盤縮放；內建使用說明與關於資訊。
 
+### 桌面小工具
+
+以 Glance 實作 4×2 桌面小工具（`widget/`）：顯示當日卦象（卦符、卦名、上下卦），點擊卦象可開啟詳情；下方提供「起卦」與「換一卦」兩個按鈕。「換一卦」的結果僅當日有效，隔日自動回到每日卦。小工具狀態存於 DataStore（`yibokgua_widget`），無 XML 版面。
+
 ## 環境需求
 
 - JDK 17
@@ -80,6 +84,7 @@
 
 - Kotlin 2.1.0
 - Jetpack Compose（Material 3、BOM 2025.02.00）
+- Glance（桌面小工具）
 - AndroidX Lifecycle / ViewModel / DataStore
 - AGP 8.2.2
 - JUnit 4（單元測試）
@@ -99,6 +104,7 @@ app/src/main/java/com/masteryi/yibokgua/
 │   │   └── reader/              # 書籍閱讀器（書架、閱讀、格式解析）
 │   ├── export/DetailCardExport.kt
 │   └── components/, theme/
+├── widget/                      # Glance 桌面小工具（每日一卦、起卦、換一卦）
 core/src/main/java/com/masteryi/core/model/iching/
 engine/src/main/java/com/masteryi/engine/iching/
 data/src/main/java/com/masteryi/data/repository/

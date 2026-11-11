@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">易卜卦</string>
+    <string name="widget_description">每日一卦，並可快速起卦或換一卦</string>
 </resources>
 

@@ -1,9 +1,10 @@
 # AGENTS.md
 
-易經卜卦 Android app (易卜卦 / Yibokgua). Kotlin + Jetpack Compose, 4-module Gradle build. No CI, no existing instruction files.
+易經卜卦 Android app (易卜卦 / Yibokgua). Kotlin + Jetpack Compose, 4-module Gradle build (`:app`, `:core`, `:engine`, `:data`). No CI.
 
 ## Build & verify
-- JDK 17. Android SDK path comes from the gitignored `local.properties` (`sdk.dir=/opt/android_sdk`); recreate it if a fresh clone lacks it.
+- Toolchain: Gradle 8.13 wrapper, AGP 8.2.2, Kotlin 2.1.0, JDK 17; compileSdk/targetSdk 35, minSdk 26. `settings.gradle.kts` uses the foojay toolchain resolver.
+- Android SDK path comes from the gitignored `local.properties` (`sdk.dir=/opt/android_sdk`); recreate it if a fresh clone lacks it.
 - `gradle.properties` sets `android.aapt2FromMavenOverride=/usr/bin/aapt2`. Builds fail without this system aapt2 — do not remove it.
 - Commands:
   - `./gradlew :app:compileDebugKotlin` — fastest compile check
@@ -30,23 +31,28 @@ One-way deps; keep domain logic in its module, not in `:app`:
 - 時間起卦有兩版：`calculateTimeDivination`（國曆：年+月+日 / 時+分，非傳統）與 `calculateLunarTimeDivination`（農曆：年支+月+日[+時支]，傳統梅花）。`LunarDate.yearBranchNumber` 與 `hourBranchNumber(hour)` 提供 1–12 地支序（子1…亥12）。
 - `rollSingleYao` 為傳統三錢法：每枚銅錢 3/2，三枚和 6/7/8/9 → 老陰/少陽/少陰/老陽，精確機率 1/8、3/8、3/8、1/8（12.5/37.5/37.5/12.5%）；`DivinationEngineTest` 以固定種子斷言。
 - `ChineseStrokeCounter` 以 Unihan `kTotalStrokes`（來源 unicode-org/unicodetools，內建於 `engine/src/main/resources/unihan_stroke_counts.txt`）為準，**逐碼位採該字本身之繁體筆畫**（「請」U+8ACB=15 vs「请」U+8BF7=10）。涵蓋 BMP 漢字近 100%；未涵蓋之罕用字（多為擴充 B 區以上）回傳 `FALLBACK_STROKES = 6`，`hasData(cp)` 可判別；非漢字回傳 0。改動資料後以 `ChineseStrokeCounterTest` 驗證。
+- 互卦 (`HexagramRepository`) 以「下互 + 上互」組成，須與 `binaryCode` 的下卦在前慣例一致（曾誤為上互在前，`HexagramDataTest` 有斷言）。
 - Tests assume `HexagramRepository` holds exactly 64 unique hexagrams.
 
 ## State & persistence
-- DataStore only, never SharedPreferences. Three stores: `yibokgua_settings` (`SettingsRepository`), `yibokgua_reader` (`ReaderSettingsRepository`), and `yibokgua_library` (`BookLibraryRepository`, key `books`).
+- DataStore only, never SharedPreferences. Four stores: `yibokgua_settings` (`SettingsRepository`), `yibokgua_reader` (`ReaderSettingsRepository`), `yibokgua_library` (`BookLibraryRepository`, key `books`), and `yibokgua_widget` (`WidgetStateRepository`, keys `widget_override_id` / `widget_override_epoch_day`).
 - `DivinationViewModel.historyList` is **in-memory only** — lost on process death; capped at `MAX_HISTORY = 200`. (README overstates this as persisted history.)
 - ViewModels via `by viewModels()`: `DivinationViewModel` is a plain `ViewModel`; `SettingsViewModel` / `ReaderViewModel` are `AndroidViewModel`.
 - Reader (`ui/screen/reader/`): supports PDF, DOC/DOCX, MD, TXT. Batch import via SAF `OpenMultipleDocuments`; imported files are **copied** to `filesDir/books/<id>.<ext>` (`BookLibraryRepository.import`), metadata serialized into the `yibokgua_library` DataStore via `Book.encode/decode`. Reading positions stored as `Book.progress` (0..1).
 - Reader format parsing (kept in `:app`, no third-party libs): `TextDecoder` (BOM / UTF-8 strict / UTF-16 / GB18030), `MarkdownParser`, `DocxExtractor` (`java.util.zip` + regex on `word/document.xml`), `DocExtractor` (best-effort binary `.doc`), `PdfHelper` (Android `PdfRenderer`, per-page lazy render), orchestrated by `DocumentParser`. Pure logic in these classes is unit-tested from `app/src/test`.
+- 桌面小工具 (`widget/`, Glance 1.1.1)：`HexagramWidget` + `HexagramWidgetReceiver`（manifest 註冊，provider 設定在 `res/xml/hexagram_widget_info.xml`）。每日卦以 `WidgetHexagram.dailyId(epochDay)` 穩定對應；「換一卦」寫入 `yibokgua_widget` 的當日覆寫值（跨日失效）。啟動導覽靠 Intent extras `EXTRA_OPEN_DIVINATION` / `EXTRA_HEXAGRAM_ID`，由 `MainActivity.onCreate`（僅 `savedInstanceState == null`）與 `onNewIntent` 消費。
 
 ## UI conventions
 - All user-facing strings and code comments are Traditional Chinese (zh-TW). Match it; do not add English UI strings.
-- Compose only — no XML layouts. XML is limited to the theme (`AppTheme`), manifest, and drawables.
+- Compose only — no XML layouts. XML is limited to the theme (`AppTheme`), manifest, drawables, and the app-widget provider (`res/xml/hexagram_widget_info.xml`).
 - Global UI knobs via CompositionLocals in `ui/theme/CompositionLocals.kt`: `LocalBorderWidth`, `LocalKeyboardScale`, driven by settings.
 - `MainActivity` tab indices: 0 首頁, 1 書籍, 2 64卦庫, 3 歷史, 4 設定, 5 起卦 (reached from Home only, no nav item). Keep indices contiguous — `ZenPageTransition` uses them for slide direction.
 - Tabs are defined twice: `NavigationBarItems` (phone) and `NavigationRailItems` (wide). Update both, and wrap pages in `AdaptiveScreen` for large-screen width capping.
 - Only `material-icons-core` is on the classpath (not `-extended`). Custom vectors (e.g. `BookIcon` in `ui/components/AppIcons.kt`) are built with `ImageVector.Builder` + `PathParser`; do not reference non-core `Icons.*`.
+- 以 `collectAsStateWithLifecycle()` 收集 ViewModel 狀態，勿用 `collectAsState()`。
 
 ## Gotchas
 - `app/release-keystore.jks` is committed but not referenced by any `signingConfig`; release builds are currently unsigned.
 - Default branch is `master`. No CI, no branch protection.
+- `ui/export/DetailCardExport.kt`：Compose 需先附加至視窗才能建立 composition。現行做法是將透明 `ComposeView` 掛到 `android.R.id.content`，待首帧 (`OnPreDrawListener`) 後量測、繪製再移除；勿改回 detached 寫法（會丟 `IllegalStateException`）。
+- Material3 `DatePicker` 以 UTC 表示日期；轉 `LocalDate` 須用 `ZoneOffset.UTC`，用 `systemDefault()` 會位移一天。

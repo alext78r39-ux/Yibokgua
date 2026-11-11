@@ -1,5 +1,6 @@
 package com.masteryi.yibokgua
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -41,9 +42,14 @@ class MainActivity : ComponentActivity() {
     private val settingsViewModel: SettingsViewModel by viewModels()
     private val readerViewModel: ReaderViewModel by viewModels()
 
+    /** 由桌面小工具啟動時帶入的導覽請求。 */
+    private val launchRequest = mutableStateOf<LaunchRequest?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // 僅在首次建立時處理啟動 Intent，避免旋轉等重建時重複導覽
+        if (savedInstanceState == null) consumeLaunchIntent(intent)
         setContent {
             val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
             CompositionLocalProvider(
@@ -59,6 +65,22 @@ class MainActivity : ComponentActivity() {
                 var currentTab by rememberSaveable { mutableIntStateOf(0) }
                 var pendingDetailId by rememberSaveable { mutableStateOf<Int?>(null) }
                 var pendingDivinationTab by rememberSaveable { mutableStateOf<Int?>(null) }
+
+                val request = launchRequest.value
+                LaunchedEffect(request) {
+                    when (request) {
+                        LaunchRequest.OpenDivination -> {
+                            pendingDivinationTab = 0
+                            currentTab = 5
+                        }
+                        is LaunchRequest.OpenHexagram -> {
+                            pendingDetailId = request.id
+                            currentTab = 2
+                        }
+                        null -> Unit
+                    }
+                    if (request != null) launchRequest.value = null
+                }
 
                 val isWide = LocalConfiguration.current.screenWidthDp >= 600
 
@@ -128,6 +150,36 @@ class MainActivity : ComponentActivity() {
             }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        consumeLaunchIntent(intent)
+    }
+
+    /** 解析桌面小工具帶入的啟動參數。 */
+    private fun consumeLaunchIntent(intent: Intent?) {
+        intent ?: return
+        when {
+            intent.getBooleanExtra(EXTRA_OPEN_DIVINATION, false) ->
+                launchRequest.value = LaunchRequest.OpenDivination
+
+            intent.getIntExtra(EXTRA_HEXAGRAM_ID, -1) > 0 ->
+                launchRequest.value =
+                    LaunchRequest.OpenHexagram(intent.getIntExtra(EXTRA_HEXAGRAM_ID, -1))
+        }
+    }
+
+    /** 桌面小工具點擊後欲前往的目的地。 */
+    private sealed interface LaunchRequest {
+        data object OpenDivination : LaunchRequest
+        data class OpenHexagram(val id: Int) : LaunchRequest
+    }
+
+    companion object {
+        const val EXTRA_OPEN_DIVINATION = "com.masteryi.yibokgua.extra.OPEN_DIVINATION"
+        const val EXTRA_HEXAGRAM_ID = "com.masteryi.yibokgua.extra.HEXAGRAM_ID"
     }
 }
 

@@ -50,13 +50,25 @@
 - **實作**：`.docx` 以 `java.util.zip` 解析 `word/document.xml`；`.doc` 為盡力擷取純文字；Markdown 為自製輕量解析；全部不引入第三方函式庫。
 - **儲存**：書本中繼資料以 DataStore（`yibokgua_library`）保存，未使用 SharedPreferences。
 
+### 九宮六壬（「六壬」頁）
+
+- 以農曆月、日、時辰序取數：月卦＝(月−1) mod 9＋1；日卦自月宮續推、時卦自日宮續推，**時宮為主卦**。
+- 九卦：大安、留連、速喜、赤口、小吉、空亡、病符、桃花、天德（各含方位、五行、象意）。
+- 頁面自動帶入當下農曆月／日與時支，可手動調整後按「起卦」；顯示月／日／時三張卦卡、可點的九宮盤與三層關聯解讀。
+- 解讀只做結構化提示（同象、時月同象、時日同象、三卦各異），不自動斷吉凶：月定基、日續推、時定局；象意優先，五行輔助。
+
 ### 設定
 
 主題（亮／暗／動態色彩）、字級、色彩預設、邊框寬度、鍵盤縮放；內建使用說明與關於資訊。
 
 ### 桌面小工具
 
-以 Glance 實作 4×2 桌面小工具（`widget/`）：顯示當日卦象（卦符、卦名、上下卦），點擊卦象可開啟詳情；下方提供「起卦」與「換一卦」兩個按鈕。「換一卦」的結果僅當日有效，隔日自動回到每日卦。小工具狀態存於 DataStore（`yibokgua_widget`），無 XML 版面。
+以 Glance 實作兩款 4×2 桌面小工具（`widget/`）：
+
+- **每日一卦**：顯示當日卦象（卦符、卦名、上下卦），點擊卦象可開啟詳情；下方提供「起卦」與「換一卦」。「換一卦」僅當日有效，隔日回到每日卦。
+- **九宮六壬**：依當下農曆月／日／時支顯示月、日、時三卦（時卦以主色標示），點擊可開啟完整九宮六壬頁面；每 30 分鐘更新以反映時辰。
+
+小工具狀態存於 DataStore（`yibokgua_widget`），無 XML 版面。
 
 ## 環境需求
 
@@ -100,12 +112,14 @@ app/src/main/java/com/masteryi/yibokgua/
 │   ├── screen/
 │   │   ├── home/                # HomeScreen, HistoryScreen, SettingsScreen
 │   │   ├── input/               # DivinationInputScreen（五種起卦介面）
+│   │   ├── ninepalace/          # NinePalaceScreen（九宮六壬）
 │   │   ├── query/               # HexagramQueryScreen（卦象查詢）
 │   │   └── reader/              # 書籍閱讀器（書架、閱讀、格式解析）
 │   ├── export/DetailCardExport.kt
 │   └── components/, theme/
-├── widget/                      # Glance 桌面小工具（每日一卦、起卦、換一卦）
+├── widget/                      # Glance 桌面小工具（每日一卦、九宮六壬）
 core/src/main/java/com/masteryi/core/model/iching/
 engine/src/main/java/com/masteryi/engine/iching/
+engine/src/main/java/com/masteryi/engine/ninepalace/
 data/src/main/java/com/masteryi/data/repository/
 ```

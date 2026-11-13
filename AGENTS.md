@@ -18,7 +18,7 @@
 ## Module boundaries
 One-way deps; keep domain logic in its module, not in `:app`:
 - `:core` — pure models only (`Hexagram`, `Trigram`, `Yao`, `DivinationResult`, `LunarDate`, `TiYongAnalysis`, `EightPalace`). No project deps.
-- `:engine` — algorithms (`DivinationEngine`, `TiYongAnalyzer`, `ChineseStrokeCounter`). Depends on `:core`.
+- `:engine` — algorithms (`DivinationEngine`, `TiYongAnalyzer`, `ChineseStrokeCounter`, `NinePalaceCalculator` / `NinePalaceInterpreter`). Depends on `:core`.
 - `:data` — repositories (`HexagramRepository` = 64 hexagrams, `TrigramInfoRepository`). Depends on `:core`.
 - `:app` — Compose UI, ViewModels, settings, export. Depends on all three.
 - No DI framework: repositories are plain classes instantiated directly inside ViewModels.
@@ -41,12 +41,13 @@ One-way deps; keep domain logic in its module, not in `:app`:
 - Reader (`ui/screen/reader/`): supports PDF, DOC/DOCX, MD, TXT. Batch import via SAF `OpenMultipleDocuments`; imported files are **copied** to `filesDir/books/<id>.<ext>` (`BookLibraryRepository.import`), metadata serialized into the `yibokgua_library` DataStore via `Book.encode/decode`. Reading positions stored as `Book.progress` (0..1).
 - Reader format parsing (kept in `:app`, no third-party libs): `TextDecoder` (BOM / UTF-8 strict / UTF-16 / GB18030), `MarkdownParser`, `DocxExtractor` (`java.util.zip` + regex on `word/document.xml`), `DocExtractor` (best-effort binary `.doc`), `PdfHelper` (Android `PdfRenderer`, per-page lazy render), orchestrated by `DocumentParser`. Pure logic in these classes is unit-tested from `app/src/test`.
 - 桌面小工具 (`widget/`, Glance 1.1.1)：`HexagramWidget` + `HexagramWidgetReceiver`（manifest 註冊，provider 設定在 `res/xml/hexagram_widget_info.xml`）。每日卦以 `WidgetHexagram.dailyId(epochDay)` 穩定對應；「換一卦」寫入 `yibokgua_widget` 的當日覆寫值（跨日失效）。啟動導覽靠 Intent extras `EXTRA_OPEN_DIVINATION` / `EXTRA_HEXAGRAM_ID`，由 `MainActivity.onCreate`（僅 `savedInstanceState == null`）與 `onNewIntent` 消費。
+- 九宮六壬 (`engine/ninepalace/`)：`NinePalaceCalculator` 只做「月→日→時」1–9 循環取數（月定基、日續推、時定局，時宮為主卦），`NinePalaceInterpreter` 只拼接三層關聯提示，不自動斷吉凶。UI 在 `ui/screen/ninepalace/NinePalaceScreen.kt`（自動帶入當下農曆月／日／時支，可手動改）。另有 `NinePalaceWidget`＋`NinePalaceWidgetReceiver`（`res/xml/nine_palace_widget_info.xml`），以 `EXTRA_OPEN_NINE_PALACE` 開啟頁面，每 30 分鐘更新以反映時辰。
 
 ## UI conventions
 - All user-facing strings and code comments are Traditional Chinese (zh-TW). Match it; do not add English UI strings.
-- Compose only — no XML layouts. XML is limited to the theme (`AppTheme`), manifest, drawables, and the app-widget provider (`res/xml/hexagram_widget_info.xml`).
+- Compose only — no XML layouts. XML is limited to the theme (`AppTheme`), manifest, drawables, and the app-widget providers (`res/xml/hexagram_widget_info.xml`, `res/xml/nine_palace_widget_info.xml`).
 - Global UI knobs via CompositionLocals in `ui/theme/CompositionLocals.kt`: `LocalBorderWidth`, `LocalKeyboardScale`, driven by settings.
-- `MainActivity` tab indices: 0 首頁, 1 書籍, 2 64卦庫, 3 歷史, 4 設定, 5 起卦 (reached from Home only, no nav item). Keep indices contiguous — `ZenPageTransition` uses them for slide direction.
+- `MainActivity` tab indices: 0 首頁, 1 書籍, 2 64卦庫, 3 歷史, 4 設定, 5 九宮六壬, 6 起卦 (reached from Home only, no nav item). Keep indices contiguous — `ZenPageTransition` uses them for slide direction.
 - Tabs are defined twice: `NavigationBarItems` (phone) and `NavigationRailItems` (wide). Update both, and wrap pages in `AdaptiveScreen` for large-screen width capping.
 - Only `material-icons-core` is on the classpath (not `-extended`). Custom vectors (e.g. `BookIcon` in `ui/components/AppIcons.kt`) are built with `ImageVector.Builder` + `PathParser`; do not reference non-core `Icons.*`.
 - 以 `collectAsStateWithLifecycle()` 收集 ViewModel 狀態，勿用 `collectAsState()`。

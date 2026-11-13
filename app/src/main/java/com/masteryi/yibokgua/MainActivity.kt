@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,6 +27,7 @@ import com.masteryi.yibokgua.ui.screen.home.HomeScreen
 import com.masteryi.yibokgua.ui.screen.home.HistoryScreen
 import com.masteryi.yibokgua.ui.screen.home.SettingsScreen
 import com.masteryi.yibokgua.ui.screen.input.DivinationInputScreen
+import com.masteryi.yibokgua.ui.screen.ninepalace.NinePalaceScreen
 import com.masteryi.yibokgua.ui.screen.query.HexagramQueryScreen
 import com.masteryi.yibokgua.ui.screen.reader.ReaderScreen
 import com.masteryi.yibokgua.ui.screen.reader.ReaderViewModel
@@ -71,6 +73,9 @@ class MainActivity : ComponentActivity() {
                     when (request) {
                         LaunchRequest.OpenDivination -> {
                             pendingDivinationTab = 0
+                            currentTab = 6
+                        }
+                        LaunchRequest.OpenNinePalace -> {
                             currentTab = 5
                         }
                         is LaunchRequest.OpenHexagram -> {
@@ -107,7 +112,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onStartManualDivination = {
                                     pendingDivinationTab = 0
-                                    currentTab = 5
+                                    currentTab = 6
                                 },
                                 onAutoOpenConsumed = { pendingDetailId = null },
                                 onRequestedTabConsumed = { pendingDivinationTab = null },
@@ -139,7 +144,7 @@ class MainActivity : ComponentActivity() {
                             },
                             onStartManualDivination = {
                                 pendingDivinationTab = 0
-                                currentTab = 5
+                                currentTab = 6
                             },
                             onAutoOpenConsumed = { pendingDetailId = null },
                             onRequestedTabConsumed = { pendingDivinationTab = null },
@@ -165,6 +170,9 @@ class MainActivity : ComponentActivity() {
             intent.getBooleanExtra(EXTRA_OPEN_DIVINATION, false) ->
                 launchRequest.value = LaunchRequest.OpenDivination
 
+            intent.getBooleanExtra(EXTRA_OPEN_NINE_PALACE, false) ->
+                launchRequest.value = LaunchRequest.OpenNinePalace
+
             intent.getIntExtra(EXTRA_HEXAGRAM_ID, -1) > 0 ->
                 launchRequest.value =
                     LaunchRequest.OpenHexagram(intent.getIntExtra(EXTRA_HEXAGRAM_ID, -1))
@@ -174,11 +182,13 @@ class MainActivity : ComponentActivity() {
     /** 桌面小工具點擊後欲前往的目的地。 */
     private sealed interface LaunchRequest {
         data object OpenDivination : LaunchRequest
+        data object OpenNinePalace : LaunchRequest
         data class OpenHexagram(val id: Int) : LaunchRequest
     }
 
     companion object {
         const val EXTRA_OPEN_DIVINATION = "com.masteryi.yibokgua.extra.OPEN_DIVINATION"
+        const val EXTRA_OPEN_NINE_PALACE = "com.masteryi.yibokgua.extra.OPEN_NINE_PALACE"
         const val EXTRA_HEXAGRAM_ID = "com.masteryi.yibokgua.extra.HEXAGRAM_ID"
     }
 }
@@ -218,7 +228,8 @@ private fun MainScreenContent(
                     settingsViewModel = settingsViewModel,
                     readerViewModel = readerViewModel
                 )
-                5 -> DivinationInputScreen(
+                5 -> NinePalaceScreen()
+                6 -> DivinationInputScreen(
                     viewModel = viewModel,
                     onNavigateToDetail = onNavigateToDetail,
                     requestedTabIndex = pendingDivinationTab,
@@ -261,6 +272,12 @@ private fun RowScope.NavigationBarItems(currentTab: Int, onSelect: (Int) -> Unit
         icon = { Icon(Icons.Default.Settings, contentDescription = "設定") },
         label = { Text("設定") }
     )
+    NavigationBarItem(
+        selected = currentTab == 5,
+        onClick = { onSelect(5) },
+        icon = { Icon(Icons.Default.Place, contentDescription = "六壬") },
+        label = { Text("六壬") }
+    )
 }
 
 @Composable
@@ -294,5 +311,11 @@ private fun NavigationRailItems(currentTab: Int, onSelect: (Int) -> Unit) {
         onClick = { onSelect(4) },
         icon = { Icon(Icons.Default.Settings, contentDescription = "設定") },
         label = { Text("設定") }
+    )
+    NavigationRailItem(
+        selected = currentTab == 5,
+        onClick = { onSelect(5) },
+        icon = { Icon(Icons.Default.Place, contentDescription = "六壬") },
+        label = { Text("六壬") }
     )
 }

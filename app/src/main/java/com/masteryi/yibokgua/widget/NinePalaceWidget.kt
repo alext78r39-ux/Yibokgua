@@ -2,7 +2,9 @@ package com.masteryi.yibokgua.widget
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.Button
@@ -33,12 +35,9 @@ import com.masteryi.engine.ninepalace.NinePalaceCalculator
 import com.masteryi.engine.ninepalace.NinePalaceGua
 import com.masteryi.engine.ninepalace.NinePalaceResult
 import com.masteryi.yibokgua.MainActivity
-import com.masteryi.yibokgua.ui.theme.YiGoldLight
-import com.masteryi.yibokgua.ui.theme.YiOnPaper
-import com.masteryi.yibokgua.ui.theme.YiOnSurfaceVariantLight
-import com.masteryi.yibokgua.ui.theme.YiPaper
-import com.masteryi.yibokgua.ui.theme.YiRedLight
-import com.masteryi.yibokgua.ui.theme.ZenOnAccentLight
+import com.masteryi.yibokgua.ui.theme.YiDarkPalette
+import com.masteryi.yibokgua.ui.theme.YiLightPalette
+import com.masteryi.yibokgua.ui.theme.YiPalette
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -73,12 +72,16 @@ class NinePalaceWidget : GlanceAppWidget() {
             }
         )
 
+        val uiMode = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        val palette = if (uiMode == Configuration.UI_MODE_NIGHT_YES) YiDarkPalette else YiLightPalette
+
         provideContent {
             NinePalaceWidgetContent(
                 result = result,
                 dateLabel = dateLabel,
                 hourLabel = hourLabel,
-                openAction = openAction
+                openAction = openAction,
+                palette = palette
             )
         }
     }
@@ -89,36 +92,109 @@ private fun NinePalaceWidgetContent(
     result: NinePalaceResult,
     dateLabel: String,
     hourLabel: String,
-    openAction: Action
+    openAction: Action,
+    palette: YiPalette
 ) {
-    val paper = ColorProvider(YiPaper)
-    val onPaper = ColorProvider(YiOnPaper)
-    val primary = ColorProvider(YiRedLight)
-    val gold = ColorProvider(YiGoldLight)
-    val variant = ColorProvider(YiOnSurfaceVariantLight)
+    val layout = currentWidgetLayout(fallbackWidth = 250.dp, fallbackHeight = 150.dp)
+    val largeText = layout.isLargeText
+    val compact = layout.isCompact
+    val wide = layout.width >= 320.dp && !compact
+    val padding = when {
+        layout.isShort -> 10.dp
+        wide -> 14.dp
+        else -> 12.dp
+    }
+    val titleSize = when {
+        largeText -> 12.sp
+        wide -> 14.sp
+        compact -> 12.sp
+        else -> 13.sp
+    }
+    val dateSize = when {
+        largeText -> 10.sp
+        wide -> 12.sp
+        else -> 11.sp
+    }
+    val guaLabelSize = when {
+        largeText -> 10.sp
+        wide -> 12.sp
+        compact -> 10.sp
+        else -> 11.sp
+    }
+    val guaNameSize = when {
+        largeText -> 18.sp
+        wide -> 24.sp
+        compact -> 19.sp
+        else -> 21.sp
+    }
+    val guaMetaSize = when {
+        largeText -> 10.sp
+        wide -> 12.sp
+        compact -> 10.sp
+        else -> 11.sp
+    }
+    val buttonSize = when {
+        largeText -> 13.sp
+        wide -> 15.sp
+        compact -> 13.sp
+        else -> 14.sp
+    }
+    val showDate = !largeText || layout.height >= 190.dp
+    val showGuaLabel = !largeText || layout.height >= 190.dp
+    val showGuaMeta = !largeText || layout.height >= 190.dp
+    val stackHeader = (largeText && showDate) || (!largeText && layout.width < 280.dp)
+    val gap = if (layout.isShort) 4.dp else 6.dp
+
+    val paper = ColorProvider(palette.paper)
+    val onPaper = ColorProvider(palette.ink)
+    val primary = ColorProvider(palette.inkSecondary)
+    val buttonBackground = ColorProvider(palette.ink)
+    val label = ColorProvider(palette.inkSecondary)
+    val variant = ColorProvider(palette.inkTertiary)
 
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(paper)
-            .padding(12.dp),
+            .padding(padding),
         verticalAlignment = Alignment.Top,
         horizontalAlignment = Alignment.Start
     ) {
-        Row(modifier = GlanceModifier.fillMaxWidth()) {
-            Text(
-                text = "易卜卦 · 九宮六壬",
-                style = TextStyle(color = gold, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-            )
-            Spacer(modifier = GlanceModifier.defaultWeight())
-            Text(
-                text = "$dateLabel · $hourLabel",
-                style = TextStyle(color = variant, fontSize = 11.sp),
-                maxLines = 1
-            )
+        if (stackHeader) {
+            Column(modifier = GlanceModifier.fillMaxWidth()) {
+                Text(
+                    text = "易卜卦 · 九宮六壬",
+                    style = TextStyle(color = label, fontSize = titleSize, fontWeight = FontWeight.Medium),
+                    maxLines = 1
+                )
+                if (showDate) {
+                    Spacer(modifier = GlanceModifier.height(2.dp))
+                    Text(
+                        text = "$dateLabel · $hourLabel",
+                        style = TextStyle(color = variant, fontSize = dateSize),
+                        maxLines = 1
+                    )
+                }
+            }
+        } else {
+            Row(modifier = GlanceModifier.fillMaxWidth()) {
+                Text(
+                    text = "易卜卦 · 九宮六壬",
+                    style = TextStyle(color = label, fontSize = titleSize, fontWeight = FontWeight.Medium),
+                    maxLines = 1
+                )
+                Spacer(modifier = GlanceModifier.defaultWeight())
+                if (showDate) {
+                    Text(
+                        text = "$dateLabel · $hourLabel",
+                        style = TextStyle(color = variant, fontSize = dateSize),
+                        maxLines = 1
+                    )
+                }
+            }
         }
 
-        Spacer(modifier = GlanceModifier.height(6.dp))
+        Spacer(modifier = GlanceModifier.height(gap))
 
         Row(
             modifier = GlanceModifier
@@ -127,21 +203,60 @@ private fun NinePalaceWidgetContent(
                 .clickable(openAction),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            GuaPill("月・背景", result.monthGua, false, primary, onPaper, variant, GlanceModifier.defaultWeight())
-            GuaPill("日・過程", result.dayGua, false, primary, onPaper, variant, GlanceModifier.defaultWeight())
-            GuaPill("時・主卦", result.hourGua, true, primary, onPaper, variant, GlanceModifier.defaultWeight())
+            GuaPill(
+                label = if (compact) "月" else "月・背景",
+                gua = result.monthGua,
+                highlighted = false,
+                showLabel = showGuaLabel,
+                showMeta = showGuaMeta,
+                labelSize = guaLabelSize,
+                nameSize = guaNameSize,
+                metaSize = guaMetaSize,
+                primary = primary,
+                onPaper = onPaper,
+                variant = variant,
+                modifier = GlanceModifier.defaultWeight()
+            )
+            GuaPill(
+                label = if (compact) "日" else "日・過程",
+                gua = result.dayGua,
+                highlighted = false,
+                showLabel = showGuaLabel,
+                showMeta = showGuaMeta,
+                labelSize = guaLabelSize,
+                nameSize = guaNameSize,
+                metaSize = guaMetaSize,
+                primary = primary,
+                onPaper = onPaper,
+                variant = variant,
+                modifier = GlanceModifier.defaultWeight()
+            )
+            GuaPill(
+                label = if (compact) "時" else "時・主卦",
+                gua = result.hourGua,
+                highlighted = true,
+                showLabel = showGuaLabel,
+                showMeta = showGuaMeta,
+                labelSize = guaLabelSize,
+                nameSize = guaNameSize,
+                metaSize = guaMetaSize,
+                primary = primary,
+                onPaper = onPaper,
+                variant = variant,
+                modifier = GlanceModifier.defaultWeight()
+            )
         }
 
-        Spacer(modifier = GlanceModifier.height(6.dp))
+        Spacer(modifier = GlanceModifier.height(gap))
 
         Button(
-            text = "開啟九宮六壬",
+            text = if (largeText || layout.width < 280.dp) "開啟" else "開啟九宮六壬",
             onClick = openAction,
             modifier = GlanceModifier.fillMaxWidth(),
-            style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium),
+            style = TextStyle(fontSize = buttonSize, fontWeight = FontWeight.Medium),
             colors = ButtonDefaults.buttonColors(
-                backgroundColor = primary,
-                contentColor = ColorProvider(ZenOnAccentLight)
+                backgroundColor = buttonBackground,
+                contentColor = paper
             )
         )
     }
@@ -152,6 +267,11 @@ private fun GuaPill(
     label: String,
     gua: NinePalaceGua,
     highlighted: Boolean,
+    showLabel: Boolean,
+    showMeta: Boolean,
+    labelSize: TextUnit,
+    nameSize: TextUnit,
+    metaSize: TextUnit,
     primary: ColorProvider,
     onPaper: ColorProvider,
     variant: ColorProvider,
@@ -159,26 +279,31 @@ private fun GuaPill(
 ) {
     Column(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label,
-            style = TextStyle(color = variant, fontSize = 10.sp),
-            maxLines = 1
-        )
+        if (showLabel) {
+            Text(
+                text = label,
+                style = TextStyle(color = variant, fontSize = labelSize),
+                maxLines = 1
+            )
+        }
         Text(
             text = gua.guaName,
             style = TextStyle(
                 color = if (highlighted) primary else onPaper,
-                fontSize = 17.sp,
+                fontSize = nameSize,
                 fontWeight = FontWeight.Bold
             ),
             maxLines = 1
         )
-        Text(
-            text = "${gua.number}・${gua.element}",
-            style = TextStyle(color = variant, fontSize = 10.sp),
-            maxLines = 1
-        )
+        if (showMeta) {
+            Text(
+                text = "${gua.number}・${gua.element}",
+                style = TextStyle(color = variant, fontSize = metaSize),
+                maxLines = 1
+            )
+        }
     }
 }

@@ -27,6 +27,8 @@ import com.masteryi.yibokgua.ui.components.TrigramInfoDialog
 import com.masteryi.yibokgua.ui.components.TrigramPairSection
 import com.masteryi.yibokgua.ui.components.ZenCard
 import com.masteryi.yibokgua.ui.components.zenThinBorder
+import com.masteryi.yibokgua.ui.theme.YiType
+import com.masteryi.yibokgua.ui.theme.systemFontTypography
 import com.masteryi.yibokgua.ui.theme.YibokguaTheme
 import com.masteryi.yibokgua.viewmodel.DivinationViewModel
 
@@ -56,85 +58,89 @@ fun HexagramQueryScreen(
         }
     }
 
-    AdaptiveScreen {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                label = { Text("搜尋 64 卦 (例如：乾、坤、1)") },
-                modifier = Modifier.fillMaxWidth()
-            )
+    MaterialTheme(typography = systemFontTypography()) {
+        AdaptiveScreen {
+            Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    label = { Text("搜尋 64 卦 (例如：乾、坤、1)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // 全局自適應：以 360dp 為基準自動分欄（窄螢幕單欄、平板雙欄）
-            LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 360.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(filteredList) { hexagram ->
-                ZenCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { selectedHexagram = hexagram }
+                // 全局自適應：以 360dp 為基準自動分欄（窄螢幕單欄、平板雙欄）
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 360.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 14.dp)
-                            .fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                items(filteredList) { hexagram ->
+                    ZenCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { selectedHexagram = hexagram }
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            // 完整的六爻卦象
-                            Text(
-                                text = hexagram.symbol,
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
+                        Row(
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp, vertical = 14.dp)
+                                .fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // 完整的六爻卦象
                                 Text(
-                                    text = "第 ${hexagram.id} 卦",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = hexagram.name,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
+                                    text = hexagram.symbol,
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontFamily = YiType.symbolFamily,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "第 ${hexagram.id} 卦",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = hexagram.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
                             }
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = hexagram.wuXingRelation,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "${hexagram.upperTrigram.nameZh}${hexagram.upperTrigram.symbol} " +
-                                    "${hexagram.lowerTrigram.symbol}${hexagram.lowerTrigram.nameZh}",
-                                style = MaterialTheme.typography.titleLarge
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = hexagram.wuXingRelation,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "${hexagram.upperTrigram.nameZh}${hexagram.upperTrigram.symbol} " +
+                                        "${hexagram.lowerTrigram.symbol}${hexagram.lowerTrigram.nameZh}",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontFamily = YiType.symbolFamily
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
-    }
 
-    selectedHexagram?.let { hexagram ->
-        HexagramDetailDialog(
-            hexagram = hexagram,
-            getTrigramInfo = viewModel::getTrigramInfo,
-            onDismiss = { selectedHexagram = null },
-            onHexagramClick = { selectedHexagram = it }
-        )
+        selectedHexagram?.let { hexagram ->
+            HexagramDetailDialog(
+                hexagram = hexagram,
+                getTrigramInfo = viewModel::getTrigramInfo,
+                onDismiss = { selectedHexagram = null },
+                onHexagramClick = { selectedHexagram = it }
+            )
+        }
     }
 }
 
@@ -169,6 +175,7 @@ fun HexagramDetailDialog(
                     Text(
                         text = hexagram.symbol,
                         fontSize = 84.sp,
+                        fontFamily = YiType.symbolFamily,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -183,6 +190,7 @@ fun HexagramDetailDialog(
                         text = "${hexagram.upperTrigram.nameZh}${hexagram.upperTrigram.symbol} " +
                             "${hexagram.lowerTrigram.symbol}${hexagram.lowerTrigram.nameZh}（上${hexagram.upperTrigram.nameZh}下${hexagram.lowerTrigram.nameZh}）",
                         style = MaterialTheme.typography.bodyMedium,
+                        fontFamily = YiType.symbolFamily,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
@@ -334,6 +342,7 @@ private fun RelatedHexagramCard(
             Text(
                 text = hexagram.symbol,
                 fontSize = 28.sp,
+                fontFamily = YiType.symbolFamily,
                 textAlign = TextAlign.Center
             )
             Text(

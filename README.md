@@ -59,16 +59,16 @@
 
 ### 設定
 
-主題（亮／暗／動態色彩）、字級、色彩預設、邊框寬度、鍵盤縮放；內建使用說明與關於資訊。
+主題（亮／暗）、字級、邊框寬度、鍵盤縮放；全域採低對比的黑／白單色，內建使用說明與關於資訊。
 
 ### 桌面小工具
 
-以 Glance 實作兩款 4×2 桌面小工具（`widget/`）：
+以 Glance 實作兩款桌面小工具（`widget/`）：
 
-- **每日一卦**：顯示當日卦象（卦符、卦名、上下卦），點擊卦象可開啟詳情；下方提供「起卦」與「換一卦」。「換一卦」僅當日有效，隔日回到每日卦。
+- **此刻之卦**：以梅花易數取當下農曆年支、月、日、時支成卦（23:00 起算次日子時），右上顯示干支年月日時，並列出「S1／S2 除 8、除 6」的取數過程；下方顯示本卦與變卦。點擊卦象可開啟本卦詳情，下方提供「起卦」與「重新整理」。卦象隨時辰（每 2 小時）變動。
 - **九宮六壬**：依當下農曆月／日／時支顯示月、日、時三卦（時卦以主色標示），點擊可開啟完整九宮六壬頁面；每 30 分鐘更新以反映時辰。
 
-小工具狀態存於 DataStore（`yibokgua_widget`），無 XML 版面。
+小工具無 XML 版面；「此刻之卦」不保存覆寫狀態。
 
 ## 環境需求
 
@@ -117,7 +117,7 @@ app/src/main/java/com/masteryi/yibokgua/
 │   │   └── reader/              # 書籍閱讀器（書架、閱讀、格式解析）
 │   ├── export/DetailCardExport.kt
 │   └── components/, theme/
-├── widget/                      # Glance 桌面小工具（每日一卦、九宮六壬）
+├── widget/                      # Glance 桌面小工具（此刻之卦、九宮六壬）
 core/src/main/java/com/masteryi/core/model/iching/
 engine/src/main/java/com/masteryi/engine/iching/
 engine/src/main/java/com/masteryi/engine/ninepalace/

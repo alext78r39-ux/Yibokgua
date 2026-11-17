@@ -2,7 +2,6 @@ package com.masteryi.yibokgua.ui.screen.home
 
 import android.content.pm.PackageManager
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -23,7 +22,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.masteryi.yibokgua.settings.ColorPreset
 import com.masteryi.yibokgua.settings.SettingsViewModel
 import com.masteryi.yibokgua.settings.ThemeMode
 import com.masteryi.yibokgua.ui.components.AdaptiveScreen
@@ -71,31 +69,6 @@ fun SettingsScreen(
                             selected = settings.themeMode == mode,
                             onClick = { settingsViewModel.setThemeMode(mode) },
                             modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-                HorizontalDivider(Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-
-                SwitchRow(
-                    title = "動態取色",
-                    subtitle = "使用 Android 12+ 系統色彩",
-                    checked = settings.dynamicColor,
-                    onCheckedChange = settingsViewModel::setDynamicColor
-                )
-                HorizontalDivider(Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-
-                // 配色方案
-                SettingSectionTitle("配色方案", "選擇應用主色調")
-                Spacer(Modifier.height(4.dp))
-                Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    ColorPreset.entries.forEach { preset ->
-                        FilterChip(
-                            selected = settings.colorPreset == preset,
-                            onClick = { settingsViewModel.setColorPreset(preset) },
-                            label = { Text(preset.label, style = MaterialTheme.typography.labelSmall) }
                         )
                     }
                 }
@@ -541,7 +514,7 @@ private val USAGE_TEXT = """
 閱讀時點擊畫面中央可顯示或隱藏工具列，並可即時調整字級與行距；PDF 以逐頁方式顯示。長按書卡右上角可刪除書本。
 
 【設定】
-可切換主題模式（跟隨系統／淺色／深色）、動態取色，並可調整閱讀字級、行距與段落間距，亦可重置所有設定。
+可切換主題模式（跟隨系統／淺色／深色），介面一律採低對比的黑／白配色，並可調整閱讀字級、行距與段落間距，亦可重置所有設定。
 
 【貼士】
 心誠則靈，一事一卦。同一件事短期內不宜重複占問。

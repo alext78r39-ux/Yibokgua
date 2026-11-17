@@ -2,6 +2,7 @@ package com.masteryi.yibokgua.widget
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,30 +32,40 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.masteryi.core.model.iching.Hexagram
 import com.masteryi.data.repository.HexagramRepository
+import com.masteryi.engine.iching.DivinationEngine
+import com.masteryi.engine.iching.EARTHLY_BRANCH_NAMES
+import com.masteryi.engine.iching.MeihuaTimeCalculation
+import com.masteryi.engine.iching.hourBranchNumber
 import com.masteryi.yibokgua.MainActivity
-import com.masteryi.yibokgua.ui.theme.OnYiGoldContainer
-import com.masteryi.yibokgua.ui.theme.YiGoldContainer
-import com.masteryi.yibokgua.ui.theme.YiGoldLight
-import com.masteryi.yibokgua.ui.theme.YiOnPaper
-import com.masteryi.yibokgua.ui.theme.YiOnSurfaceVariantLight
-import com.masteryi.yibokgua.ui.theme.YiPaper
-import com.masteryi.yibokgua.ui.theme.YiRedLight
-import com.masteryi.yibokgua.ui.theme.ZenOnAccentLight
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import com.masteryi.yibokgua.ui.theme.YiDarkPalette
+import com.masteryi.yibokgua.ui.theme.YiLightPalette
+import com.masteryi.yibokgua.ui.theme.YiPalette
+import java.time.LocalDateTime
 
 /**
- * 「易卜卦」桌面小工具：上半為每日一卦，下方提供「起卦」與「換一卦」。
- * 使用 Glance（Compose 風格）實作，無 XML 版面。
+ * 「易卜卦」桌面小工具：以梅花易數取當下農曆年支、月、日、時支成卦。
+ * 23:00 起算次日子時；顯示取數計算過程、本卦、動爻與變卦。
  */
 class HexagramWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val today = LocalDate.now()
-        val epochDay = today.toEpochDay()
-        val state = WidgetStateRepository(context).state()
-        val hexagram = resolveHexagram(WidgetHexagram.resolveId(state, epochDay))
-        val dateLabel = today.format(DateTimeFormatter.ofPattern("M月d日"))
+        val now = LocalDateTime.now()
+        val repository = HexagramRepository()
+        val engine = DivinationEngine(repository::getHexagramByBinary)
+
+        val calculation = runCatching {
+            engine.calculateMeihuaTimeCalculation(now.toLocalDate(), now.hour)
+        }.getOrNull()
+        val hourBranchNum = calculation?.hourBranchNum ?: hourBranchNumber(now.hour)
+        val hourName = EARTHLY_BRANCH_NAMES[hourBranchNum - 1]
+        val dateLabel = calculation?.lunar?.let {
+            "${it.ganZhiYear}年${it.monthLabel}${it.dayLabel} ${hourName}時"
+        } ?: "農曆換算失敗"
+
+        val hexagram = calculation?.result?.originalHexagram
+            ?: repository.getAllHexagrams().first()
+        val mutatedHexagram = calculation?.result?.mutatedHexagram
+        val processText = calculation?.let(::buildProcessText)
 
         val detailAction = actionStartActivity(
             launchIntent(context) { putExtra(MainActivity.EXTRA_HEXAGRAM_ID, hexagram.id) }
@@ -63,21 +74,21 @@ class HexagramWidget : GlanceAppWidget() {
             launchIntent(context) { putExtra(MainActivity.EXTRA_OPEN_DIVINATION, true) }
         )
         val refreshAction = actionRunCallback<RefreshWidgetAction>()
+        val uiMode = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        val palette = if (uiMode == Configuration.UI_MODE_NIGHT_YES) YiDarkPalette else YiLightPalette
 
         provideContent {
             WidgetContent(
                 hexagram = hexagram,
+                mutatedHexagram = mutatedHexagram,
+                processText = processText,
                 dateLabel = dateLabel,
                 detailAction = detailAction,
                 divinationAction = divinationAction,
-                refreshAction = refreshAction
+                refreshAction = refreshAction,
+                palette = palette
             )
         }
-    }
-
-    private fun resolveHexagram(id: Int): Hexagram {
-        val repository = HexagramRepository()
-        return repository.getHexagramById(id) ?: repository.getAllHexagrams().first()
     }
 
     /** 重用既有 MainActivity（透過 onNewIntent 導覽），避免堆疊重複頁面。 */
@@ -92,44 +103,149 @@ class HexagramWidget : GlanceAppWidget() {
         }
 }
 
+/** 產生「7+10+9=26 除 8 餘 2，上卦：兌。…」的完整計算式。 */
+private fun buildProcessText(c: MeihuaTimeCalculation): String {
+    fun remainder(total: Int, divisor: Int): String {
+        val r = total % divisor
+        return if (r == 0) "整除，記 $divisor" else "餘 $r"
+    }
+
+    val upper = c.result.originalHexagram.upperTrigram.nameZh
+    val lower = c.result.originalHexagram.lowerTrigram.nameZh
+    return buildString {
+        append(
+            "${c.yearBranchNum}+${c.lunarMonth}+${c.lunarDay}=${c.sumBase} " +
+                "除 8 ${remainder(c.sumBase, 8)}，上卦：$upper。"
+        )
+        append(
+            "${c.sumBase}+${c.hourBranchNum}=${c.sumTotal} " +
+                "除 8 ${remainder(c.sumTotal, 8)}，下卦：$lower。"
+        )
+        append("${c.sumTotal} 除 6 ${remainder(c.sumTotal, 6)}，動爻：第 ${c.movingYaoNum} 爻")
+    }
+}
+
 @Composable
 private fun WidgetContent(
     hexagram: Hexagram,
+    mutatedHexagram: Hexagram?,
+    processText: String?,
     dateLabel: String,
     detailAction: Action,
     divinationAction: Action,
-    refreshAction: Action
+    refreshAction: Action,
+    palette: YiPalette
 ) {
-    val paper = ColorProvider(YiPaper)
-    val onPaper = ColorProvider(YiOnPaper)
-    val primary = ColorProvider(YiRedLight)
-    val gold = ColorProvider(YiGoldLight)
-    val variant = ColorProvider(YiOnSurfaceVariantLight)
+    val layout = currentWidgetLayout(fallbackWidth = 250.dp, fallbackHeight = 190.dp)
+    val largeText = layout.isLargeText
+    val compact = layout.isCompact
+    val wide = layout.width >= 320.dp && !compact
+    val padding = when {
+        layout.isShort -> 10.dp
+        wide -> 14.dp
+        else -> 12.dp
+    }
+    val titleSize = when {
+        largeText -> 11.sp
+        wide -> 13.sp
+        compact -> 12.sp
+        else -> 13.sp
+    }
+    val dateSize = when {
+        largeText -> 10.sp
+        wide -> 12.sp
+        else -> 11.sp
+    }
+    val processSize = if (wide) 11.sp else 10.sp
+    val symbolSize = when {
+        largeText -> 32.sp
+        wide -> 44.sp
+        compact -> 36.sp
+        else -> 42.sp
+    }
+    val nameSize = when {
+        largeText -> 16.sp
+        wide -> 24.sp
+        compact -> 19.sp
+        else -> 22.sp
+    }
+    val metaSize = when {
+        largeText -> 10.sp
+        wide -> 14.sp
+        else -> 12.sp
+    }
+    val buttonSize = when {
+        largeText -> 13.sp
+        wide -> 15.sp
+        else -> 14.sp
+    }
+    val showDate = !largeText || layout.height >= 220.dp
+    val showProcess = !largeText && processText != null
+    val showMutated = !largeText || layout.height >= 220.dp
+    val stackHeader = (largeText && showDate) || (!largeText && layout.width < 280.dp)
+    val gap = if (layout.isShort) 4.dp else 6.dp
+
+    val paper = ColorProvider(palette.paper)
+    val onPaper = ColorProvider(palette.ink)
+    val primary = ColorProvider(palette.ink)
+    val label = ColorProvider(palette.inkSecondary)
+    val variant = ColorProvider(palette.inkTertiary)
 
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(paper)
-            .padding(14.dp),
+            .padding(padding),
         verticalAlignment = Alignment.Top,
         horizontalAlignment = Alignment.Start
     ) {
-        Row(
-            modifier = GlanceModifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "易卜卦 · 今日之卦",
-                style = TextStyle(color = gold, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-            )
-            Spacer(modifier = GlanceModifier.defaultWeight())
-            Text(
-                text = dateLabel,
-                style = TextStyle(color = variant, fontSize = 11.sp)
-            )
+        if (stackHeader) {
+            Column(modifier = GlanceModifier.fillMaxWidth()) {
+                Text(
+                    text = "易卜卦 · 此刻之卦",
+                    style = TextStyle(color = label, fontSize = titleSize, fontWeight = FontWeight.Medium),
+                    maxLines = 1
+                )
+                if (showDate) {
+                    Spacer(modifier = GlanceModifier.height(2.dp))
+                    Text(
+                        text = dateLabel,
+                        style = TextStyle(color = variant, fontSize = dateSize),
+                        maxLines = 1
+                    )
+                }
+            }
+        } else {
+            Row(
+                modifier = GlanceModifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "易卜卦 · 此刻之卦",
+                    style = TextStyle(color = label, fontSize = titleSize, fontWeight = FontWeight.Medium),
+                    maxLines = 1
+                )
+                Spacer(modifier = GlanceModifier.defaultWeight())
+                if (showDate) {
+                    Text(
+                        text = dateLabel,
+                        style = TextStyle(color = variant, fontSize = dateSize),
+                        maxLines = 1
+                    )
+                }
+            }
         }
 
-        Spacer(modifier = GlanceModifier.height(6.dp))
+        Spacer(modifier = GlanceModifier.height(gap))
+
+        if (showProcess) {
+            Text(
+                text = processText,
+                style = TextStyle(color = variant, fontSize = processSize),
+                maxLines = if (layout.height >= 230.dp) 4 else 2
+            )
+            Spacer(modifier = GlanceModifier.height(gap))
+        }
 
         Row(
             modifier = GlanceModifier
@@ -140,24 +256,27 @@ private fun WidgetContent(
         ) {
             Text(
                 text = hexagram.symbol,
-                style = TextStyle(color = primary, fontSize = 34.sp)
+                style = TextStyle(color = primary, fontSize = symbolSize)
             )
-            Spacer(modifier = GlanceModifier.width(10.dp))
-            Column {
+            Spacer(modifier = GlanceModifier.width(if (compact) 8.dp else 12.dp))
+            Column(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = hexagram.name,
-                    style = TextStyle(color = onPaper, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    style = TextStyle(color = onPaper, fontSize = nameSize, fontWeight = FontWeight.Bold),
+                    maxLines = 1
                 )
-                Spacer(modifier = GlanceModifier.height(2.dp))
-                Text(
-                    text = "上${hexagram.upperTrigram.symbol}${hexagram.upperTrigram.nameZh} · " +
-                        "下${hexagram.lowerTrigram.symbol}${hexagram.lowerTrigram.nameZh}",
-                    style = TextStyle(color = variant, fontSize = 11.sp)
-                )
+                if (showMutated) {
+                    Spacer(modifier = GlanceModifier.height(2.dp))
+                    Text(
+                        text = "變卦：${mutatedHexagram?.name ?: "—"}",
+                        style = TextStyle(color = variant, fontSize = metaSize),
+                        maxLines = 1
+                    )
+                }
             }
         }
 
-        Spacer(modifier = GlanceModifier.height(8.dp))
+        Spacer(modifier = GlanceModifier.height(gap))
 
         Row(
             modifier = GlanceModifier.fillMaxWidth(),
@@ -167,21 +286,21 @@ private fun WidgetContent(
                 text = "起卦",
                 onClick = divinationAction,
                 modifier = GlanceModifier.defaultWeight(),
-                style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium),
+                style = TextStyle(fontSize = buttonSize, fontWeight = FontWeight.Medium),
                 colors = ButtonDefaults.buttonColors(
                     backgroundColor = primary,
-                    contentColor = ColorProvider(ZenOnAccentLight)
+                    contentColor = paper
                 )
             )
             Spacer(modifier = GlanceModifier.width(8.dp))
             Button(
-                text = "換一卦",
+                text = if (largeText || layout.width < 280.dp) "整理" else "重新整理",
                 onClick = refreshAction,
                 modifier = GlanceModifier.defaultWeight(),
-                style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium),
+                style = TextStyle(fontSize = buttonSize, fontWeight = FontWeight.Medium),
                 colors = ButtonDefaults.buttonColors(
-                    backgroundColor = ColorProvider(YiGoldContainer),
-                    contentColor = ColorProvider(OnYiGoldContainer)
+                    backgroundColor = ColorProvider(palette.paperMuted),
+                    contentColor = onPaper
                 )
             )
         }

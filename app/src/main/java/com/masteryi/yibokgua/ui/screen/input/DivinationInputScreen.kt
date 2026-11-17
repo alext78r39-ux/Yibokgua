@@ -17,7 +17,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +39,8 @@ import com.masteryi.yibokgua.ui.components.TrigramPairSection
 import com.masteryi.yibokgua.ui.components.ZenCard
 import com.masteryi.yibokgua.ui.components.zenThinBorder
 import com.masteryi.yibokgua.ui.theme.LocalKeyboardScale
+import com.masteryi.yibokgua.ui.theme.YiColors
+import com.masteryi.yibokgua.ui.theme.YiType
 import com.masteryi.yibokgua.viewmodel.DivinationViewModel
 import com.masteryi.engine.iching.EARTHLY_BRANCH_NAMES
 import com.masteryi.engine.iching.countChineseCharacters
@@ -262,14 +263,16 @@ private fun TaijiButton(
 /** 太極視覺圖形（黑白雙魚） */
 @Composable
 private fun TaijiArtwork(modifier: Modifier = Modifier) {
+    val ink = YiColors.ink
+    val yang = YiColors.yang
     Canvas(modifier = modifier) {
         val r = this.size.minDimension / 2
-        drawArc(Color.Black, 90f, 180f, true)
-        drawArc(Color.White, -90f, 180f, true)
-        drawCircle(Color.White, radius = r / 2, center = Offset(center.x, center.y - r / 2))
-        drawCircle(Color.Black, radius = r / 2, center = Offset(center.x, center.y + r / 2))
-        drawCircle(Color.Black, radius = r / 8, center = Offset(center.x, center.y - r / 2))
-        drawCircle(Color.White, radius = r / 8, center = Offset(center.x, center.y + r / 2))
+        drawArc(ink, 90f, 180f, true)
+        drawArc(yang, -90f, 180f, true)
+        drawCircle(yang, radius = r / 2, center = Offset(center.x, center.y - r / 2))
+        drawCircle(ink, radius = r / 2, center = Offset(center.x, center.y + r / 2))
+        drawCircle(ink, radius = r / 8, center = Offset(center.x, center.y - r / 2))
+        drawCircle(yang, radius = r / 8, center = Offset(center.x, center.y + r / 2))
     }
 }
 
@@ -368,6 +371,7 @@ fun YaoDisplayBoard(yaos: List<Yao>, modifier: Modifier = Modifier) {
                         Text(
                             text = yao.symbol,
                             fontSize = 20.sp,
+                            fontFamily = YiType.symbolFamily,
                             color = if (yao.isMoving) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                         )
                         Text(
@@ -379,6 +383,7 @@ fun YaoDisplayBoard(yaos: List<Yao>, modifier: Modifier = Modifier) {
                         Text(
                             text = "爻 ${i + 1}: ⚊ ⚊ (待搖)",
                             fontSize = 12.sp,
+                            fontFamily = YiType.symbolFamily,
                             color = MaterialTheme.colorScheme.outline
                         )
                     }
@@ -980,7 +985,8 @@ private fun TiYongAnalysisSection(tiYongAnalysis: TiYongAnalysis?) {
             )
             Text(
                 text = "體卦${tiYongAnalysis.bodyTrigram.symbol}${tiYongAnalysis.bodyTrigram.nameZh}為自身，用卦${tiYongAnalysis.appTrigram.symbol}${tiYongAnalysis.appTrigram.nameZh}為所應之事，互卦為事之中間，變卦為事之終。",
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = YiType.symbolFamily
             )
             Spacer(modifier = Modifier.height(6.dp))
             tiYongAnalysis.summary.split("\n").forEach { line ->
@@ -1021,7 +1027,8 @@ private fun ResultHexagramColumn(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = hexagram.symbol,
-                style = MaterialTheme.typography.headlineLarge
+                style = MaterialTheme.typography.headlineLarge,
+                fontFamily = YiType.symbolFamily
             )
             Text(
                 text = hexagram.name,
@@ -1030,7 +1037,8 @@ private fun ResultHexagramColumn(
             )
             Text(
                 text = "${hexagram.upperTrigram.symbol} ${hexagram.lowerTrigram.symbol}",
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleLarge,
+                fontFamily = YiType.symbolFamily
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(

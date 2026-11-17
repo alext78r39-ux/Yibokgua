@@ -42,6 +42,7 @@ import com.masteryi.core.model.iching.DivinationResult
 import com.masteryi.core.model.iching.Hexagram
 import com.masteryi.core.model.iching.TiYongAnalysis
 import com.masteryi.yibokgua.settings.ThemeMode
+import com.masteryi.yibokgua.ui.theme.YiType
 import com.masteryi.yibokgua.ui.theme.YibokguaTheme
 import java.io.File
 import java.text.SimpleDateFormat
@@ -264,6 +265,7 @@ fun DivinationDetailCard(
                     Text(
                         text = yao.symbol,
                         fontSize = 17.sp,
+                        fontFamily = YiType.symbolFamily,
                         fontWeight = if (yao.isMoving) FontWeight.Bold else FontWeight.Normal,
                         color = if (yao.isMoving) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                     )
@@ -332,7 +334,8 @@ private fun ExportHexagramBox(
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = hexagram.symbol,
-            fontSize = 46.sp
+            fontSize = 46.sp,
+            fontFamily = YiType.symbolFamily
         )
         Text(
             text = hexagram.name,
@@ -343,6 +346,7 @@ private fun ExportHexagramBox(
         Text(
             text = "上${hexagram.upperTrigram.symbol}${hexagram.upperTrigram.nameZh}・下${hexagram.lowerTrigram.symbol}${hexagram.lowerTrigram.nameZh}",
             fontSize = 13.sp,
+            fontFamily = YiType.symbolFamily,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }

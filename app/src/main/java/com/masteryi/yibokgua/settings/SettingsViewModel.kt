@@ -19,10 +19,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { repository.setThemeMode(mode) }
     }
 
-    fun setDynamicColor(enabled: Boolean) {
-        viewModelScope.launch { repository.setDynamicColor(enabled) }
-    }
-
     fun setFontSizeScale(scale: Float) {
         viewModelScope.launch { repository.setFontSizeScale(scale) }
     }
@@ -33,10 +29,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setKeyboardScale(scale: Float) {
         viewModelScope.launch { repository.setKeyboardScale(scale) }
-    }
-
-    fun setColorPreset(preset: ColorPreset) {
-        viewModelScope.launch { repository.setColorPreset(preset) }
     }
 
     fun reset() {

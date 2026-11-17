@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">易卜卦</string>
-    <string name="widget_description">每日一卦，並可快速起卦或換一卦</string>
+    <string name="widget_description">以梅花易數顯示此刻之卦，並可快速起卦</string>
     <string name="widget_nine_palace_name">九宮六壬</string>
     <string name="widget_nine_palace_description">依當下農曆月、日、時顯示九宮六壬三卦</string>
 </resources>

@@ -10,7 +10,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.masteryi.yibokgua.ui.theme.LocalMotion
+import com.masteryi.yibokgua.ui.theme.YiMotion
 
 /**
  * 頁面切換動畫：左右滑動 + 淡入淡出。
@@ -27,22 +27,21 @@ fun ZenPageTransition(
     modifier: Modifier = Modifier,
     content: @Composable (Int) -> Unit
 ) {
-    val motion = LocalMotion.current
     AnimatedContent(
         targetState = currentPage,
         modifier = modifier,
         transitionSpec = {
             val forward = targetState > initialState
-            val offset = if (forward) motion.pageSlideFraction else -motion.pageSlideFraction
+            val offset = if (forward) YiMotion.pageSlideFraction else -YiMotion.pageSlideFraction
             val enter = slideInHorizontally(
-                animationSpec = tween(motion.emphasizedMillis, easing = motion.enterEasing)
+                animationSpec = tween(YiMotion.long, easing = YiMotion.standard)
             ) { width -> (width * offset).toInt() } + fadeIn(
-                animationSpec = tween(motion.standardMillis, easing = motion.enterEasing)
+                animationSpec = tween(YiMotion.medium, easing = YiMotion.standard)
             )
             val exit = slideOutHorizontally(
-                animationSpec = tween(motion.emphasizedMillis, easing = motion.exitEasing)
+                animationSpec = tween(YiMotion.long, easing = YiMotion.standard)
             ) { width -> (width * -offset).toInt() } + fadeOut(
-                animationSpec = tween(motion.standardMillis, easing = motion.exitEasing)
+                animationSpec = tween(YiMotion.medium, easing = YiMotion.standard)
             )
             enter togetherWith exit using SizeTransform(clip = false)
         },

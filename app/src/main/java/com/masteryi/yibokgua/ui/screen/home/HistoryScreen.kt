@@ -23,6 +23,7 @@ import com.masteryi.yibokgua.ui.export.shareDetailCardAsImage
 import com.masteryi.yibokgua.viewmodel.DivinationViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import com.masteryi.yibokgua.ui.theme.YiType
 
 private val ThinBorder: BorderStroke
     @Composable get() = zenThinBorder()
@@ -86,7 +87,8 @@ fun HistoryScreen(
                             }
                             Text(
                                 "${result.originalHexagram.symbol} ${result.originalHexagram.name}",
-                                fontSize = 22.sp
+                                fontSize = 22.sp,
+                                fontFamily = YiType.symbolFamily
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))

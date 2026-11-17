@@ -60,9 +60,7 @@ class MainActivity : ComponentActivity() {
             ) {
             YibokguaTheme(
                 themeMode = settings.themeMode,
-                dynamicColor = settings.dynamicColor,
-                fontSizeScale = settings.fontSizeScale,
-                colorPreset = settings.colorPreset
+                fontSizeScale = settings.fontSizeScale
             ) {
                 var currentTab by rememberSaveable { mutableIntStateOf(0) }
                 var pendingDetailId by rememberSaveable { mutableStateOf<Int?>(null) }

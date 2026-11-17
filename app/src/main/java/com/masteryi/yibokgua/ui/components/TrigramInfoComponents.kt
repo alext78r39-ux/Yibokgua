@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
@@ -18,14 +20,24 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.masteryi.core.model.iching.TrigramInfo
+import com.masteryi.yibokgua.ui.theme.YiMotion
+import com.masteryi.yibokgua.ui.theme.YiType
+import kotlinx.coroutines.launch
 
 /**
  * 八卦資料詳情彈窗：卦象、先天數五行、萬類象全覽。
@@ -36,11 +48,34 @@ fun TrigramInfoDialog(
     info: TrigramInfo,
     onDismiss: () -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss) {
+    val scope = rememberCoroutineScope()
+    val progress = remember { Animatable(0f) }
+    var closing by remember { mutableStateOf(false) }
+    val requestDismiss: () -> Unit = {
+        if (!closing) {
+            closing = true
+            scope.launch {
+                progress.animateTo(0f, tween(YiMotion.medium, easing = YiMotion.emphasized))
+                onDismiss()
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        progress.animateTo(1f, tween(YiMotion.medium, easing = YiMotion.emphasized))
+    }
+
+    Dialog(onDismissRequest = requestDismiss) {
         Surface(
             modifier = Modifier
                 .width(380.dp)
-                .fillMaxHeight(0.8f),
+                .fillMaxHeight(0.8f)
+                .graphicsLayer {
+                    val p = progress.value
+                    scaleX = 0.96f + 0.04f * p
+                    scaleY = 0.96f + 0.04f * p
+                    alpha = p
+                },
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surface,
             border = zenThinBorder()
@@ -54,6 +89,7 @@ fun TrigramInfoDialog(
                     Text(
                         text = info.symbol,
                         fontSize = 60.sp,
+                        fontFamily = YiType.symbolFamily,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -111,7 +147,7 @@ fun TrigramInfoDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) { Text("關閉") }
+                    TextButton(onClick = requestDismiss) { Text("關閉") }
                 }
             }
         }
@@ -183,7 +219,7 @@ fun CompactTrigramCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(info.symbol, fontSize = 24.sp)
+                Text(info.symbol, fontSize = 24.sp, fontFamily = YiType.symbolFamily)
                 Spacer(modifier = Modifier.width(6.dp))
                 Column {
                     Text(

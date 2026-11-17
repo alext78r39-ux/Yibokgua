@@ -2,9 +2,11 @@ package com.masteryi.engine.iching
 
 import com.masteryi.core.model.iching.DivinationResult
 import com.masteryi.core.model.iching.Hexagram
+import com.masteryi.core.model.iching.LunarDate
 import com.masteryi.core.model.iching.Trigram
 import com.masteryi.core.model.iching.Yao
 import java.lang.Character.UnicodeScript
+import java.time.LocalDate
 import kotlin.random.Random
 
 /** 統計字串中包含的中文字（漢字）字數 */
@@ -17,6 +19,23 @@ val EARTHLY_BRANCH_NAMES: List<String> =
 
 /** 由 24 小時制時數求時支序（子1 丑2 … 亥12）；子時跨 23:00–00:59 */
 fun hourBranchNumber(hour: Int): Int = ((hour + 1) / 2) % 12 + 1
+
+/**
+ * 梅花易數時間起卦的取數過程與結果，供 UI 顯示完整計算式。
+ */
+data class MeihuaTimeCalculation(
+    val lunar: LunarDate,
+    val yearBranchNum: Int,
+    val lunarMonth: Int,
+    val lunarDay: Int,
+    val hourBranchNum: Int,
+    val sumBase: Int,
+    val upperNum: Int,
+    val sumTotal: Int,
+    val lowerNum: Int,
+    val movingYaoNum: Int,
+    val result: DivinationResult
+)
 
 class DivinationEngine(
     private val findHexagramByBinary: (String) -> Hexagram
@@ -62,6 +81,40 @@ class DivinationEngine(
         val lowerNum = mod8(base + hourBranchNum)
         val movingYaoNum = mod6(base + hourBranchNum)
         return buildDivinationFromNums(upperNum, lowerNum, movingYaoNum, "時間起卦（農曆）")
+    }
+
+    /**
+     * 1c. 梅花易數時間起卦（以當下國曆日期與時數取卦）
+     * 23:00 起已入次日子時，農曆日先 +1 再取數；時支仍取子（1）。
+     * 閏月沿用本月序數。
+     */
+    fun calculateMeihuaTimeDivination(date: LocalDate, hour: Int): DivinationResult =
+        calculateMeihuaTimeCalculation(date, hour).result
+
+    /** 同上，另回傳年支、月、日、時支、兩個和值與各餘數，供 UI 顯示計算過程。 */
+    fun calculateMeihuaTimeCalculation(date: LocalDate, hour: Int): MeihuaTimeCalculation {
+        require(hour in 0..23) { "時數必須在 0~23" }
+        val lunar = LunarDate.of(if (hour == 23) date.plusDays(1) else date)
+        val hourBranch = hourBranchNumber(hour)
+        val sumBase = lunar.yearBranchNumber + lunar.month + lunar.day
+        val sumTotal = sumBase + hourBranch
+        val upperNum = mod8(sumBase)
+        val lowerNum = mod8(sumTotal)
+        val movingYaoNum = mod6(sumTotal)
+        val result = buildDivinationFromNums(upperNum, lowerNum, movingYaoNum, "時間起卦（農曆）")
+        return MeihuaTimeCalculation(
+            lunar = lunar,
+            yearBranchNum = lunar.yearBranchNumber,
+            lunarMonth = lunar.month,
+            lunarDay = lunar.day,
+            hourBranchNum = hourBranch,
+            sumBase = sumBase,
+            upperNum = upperNum,
+            sumTotal = sumTotal,
+            lowerNum = lowerNum,
+            movingYaoNum = movingYaoNum,
+            result = result
+        )
     }
 
     /**

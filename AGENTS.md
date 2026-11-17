@@ -35,12 +35,12 @@ One-way deps; keep domain logic in its module, not in `:app`:
 - Tests assume `HexagramRepository` holds exactly 64 unique hexagrams.
 
 ## State & persistence
-- DataStore only, never SharedPreferences. Four stores: `yibokgua_settings` (`SettingsRepository`), `yibokgua_reader` (`ReaderSettingsRepository`), `yibokgua_library` (`BookLibraryRepository`, key `books`), and `yibokgua_widget` (`WidgetStateRepository`, keys `widget_override_id` / `widget_override_epoch_day`).
+- DataStore only, never SharedPreferences. Three stores: `yibokgua_settings` (`SettingsRepository`), `yibokgua_reader` (`ReaderSettingsRepository`), and `yibokgua_library` (`BookLibraryRepository`, key `books`).
 - `DivinationViewModel.historyList` is **in-memory only** — lost on process death; capped at `MAX_HISTORY = 200`. (README overstates this as persisted history.)
 - ViewModels via `by viewModels()`: `DivinationViewModel` is a plain `ViewModel`; `SettingsViewModel` / `ReaderViewModel` are `AndroidViewModel`.
 - Reader (`ui/screen/reader/`): supports PDF, DOC/DOCX, MD, TXT. Batch import via SAF `OpenMultipleDocuments`; imported files are **copied** to `filesDir/books/<id>.<ext>` (`BookLibraryRepository.import`), metadata serialized into the `yibokgua_library` DataStore via `Book.encode/decode`. Reading positions stored as `Book.progress` (0..1).
 - Reader format parsing (kept in `:app`, no third-party libs): `TextDecoder` (BOM / UTF-8 strict / UTF-16 / GB18030), `MarkdownParser`, `DocxExtractor` (`java.util.zip` + regex on `word/document.xml`), `DocExtractor` (best-effort binary `.doc`), `PdfHelper` (Android `PdfRenderer`, per-page lazy render), orchestrated by `DocumentParser`. Pure logic in these classes is unit-tested from `app/src/test`.
-- 桌面小工具 (`widget/`, Glance 1.1.1)：`HexagramWidget` + `HexagramWidgetReceiver`（manifest 註冊，provider 設定在 `res/xml/hexagram_widget_info.xml`）。每日卦以 `WidgetHexagram.dailyId(epochDay)` 穩定對應；「換一卦」寫入 `yibokgua_widget` 的當日覆寫值（跨日失效）。啟動導覽靠 Intent extras `EXTRA_OPEN_DIVINATION` / `EXTRA_HEXAGRAM_ID`，由 `MainActivity.onCreate`（僅 `savedInstanceState == null`）與 `onNewIntent` 消費。
+- 桌面小工具 (`widget/`, Glance 1.1.1)：`HexagramWidget` + `HexagramWidgetReceiver`（manifest 註冊，provider 設定在 `res/xml/hexagram_widget_info.xml`）。「此刻之卦」以 `DivinationEngine.calculateMeihuaTimeCalculation` 取當下農曆年支／月／日／時支成卦，顯示干支日期與取數計算過程；23:00 起算次日子時，「重新整理」僅 `updateAll()`。啟動導覽靠 Intent extras `EXTRA_OPEN_DIVINATION` / `EXTRA_HEXAGRAM_ID`，由 `MainActivity.onCreate`（僅 `savedInstanceState == null`）與 `onNewIntent` 消費。
 - 九宮六壬 (`engine/ninepalace/`)：`NinePalaceCalculator` 只做「月→日→時」1–9 循環取數（月定基、日續推、時定局，時宮為主卦），`NinePalaceInterpreter` 只拼接三層關聯提示，不自動斷吉凶。UI 在 `ui/screen/ninepalace/NinePalaceScreen.kt`（自動帶入當下農曆月／日／時支，可手動改）。另有 `NinePalaceWidget`＋`NinePalaceWidgetReceiver`（`res/xml/nine_palace_widget_info.xml`），以 `EXTRA_OPEN_NINE_PALACE` 開啟頁面，每 30 分鐘更新以反映時辰。
 
 ## UI conventions
@@ -50,6 +50,7 @@ One-way deps; keep domain logic in its module, not in `:app`:
 - `MainActivity` tab indices: 0 首頁, 1 書籍, 2 64卦庫, 3 歷史, 4 設定, 5 九宮六壬, 6 起卦 (reached from Home only, no nav item). Keep indices contiguous — `ZenPageTransition` uses them for slide direction.
 - Tabs are defined twice: `NavigationBarItems` (phone) and `NavigationRailItems` (wide). Update both, and wrap pages in `AdaptiveScreen` for large-screen width capping.
 - Only `material-icons-core` is on the classpath (not `-extended`). Custom vectors (e.g. `BookIcon` in `ui/components/AppIcons.kt`) are built with `ImageVector.Builder` + `PathParser`; do not reference non-core `Icons.*`.
+- `YiType.serifFamily` 是 Noto Serif TC 子集字型，**不含** ䷀（U+4DC0 起）與 ☰（U+2630 起）等卦象符號；所有 `.symbol` 文字須明確指定 `fontFamily = YiType.symbolFamily`（系統字型），勿直接套 `MaterialTheme.typography.*` 或 `YiType.heading` 渲染符號，否則 64 卦庫等畫面會缺字。
 - 以 `collectAsStateWithLifecycle()` 收集 ViewModel 狀態，勿用 `collectAsState()`。
 
 ## Gotchas

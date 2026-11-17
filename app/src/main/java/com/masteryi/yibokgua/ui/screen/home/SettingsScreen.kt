@@ -39,6 +39,7 @@ fun SettingsScreen(
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
     val readerSettings by readerViewModel.settings.collectAsStateWithLifecycle()
     var showUsage by rememberSaveable { mutableStateOf(false) }
+    var showPrivacy by rememberSaveable { mutableStateOf(false) }
     var showAbout by rememberSaveable { mutableStateOf(false) }
     var showLegal by rememberSaveable { mutableStateOf(false) }
 
@@ -165,6 +166,12 @@ fun SettingsScreen(
                 subtitle = "起卦方法與各功能操作指引",
                 onClick = { showUsage = true }
             )
+            HorizontalDivider(Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+            SettingRow(
+                title = "離線與隱私",
+                subtitle = "不需網路、不傳送資料、無 AI",
+                onClick = { showPrivacy = true }
+            )
         }
 
         SectionLabel("關於")
@@ -201,6 +208,13 @@ fun SettingsScreen(
             title = "使用說明",
             onDismiss = { showUsage = false },
             content = USAGE_TEXT
+        )
+    }
+    if (showPrivacy) {
+        ScrollableInfoDialog(
+            title = "離線與隱私",
+            onDismiss = { showPrivacy = false },
+            content = PRIVACY_TEXT
         )
     }
     if (showAbout) {
@@ -466,6 +480,10 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                     "收錄六十四卦經文與體用生克分析，供參研易理之用。",
                     style = MaterialTheme.typography.bodyMedium
                 )
+                Text(
+                    "完全離線、無 AI：不需網路權限，不接入任何外部模型或 API。",
+                    style = MaterialTheme.typography.bodyMedium
+                )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                 Text(
                     "版本 ${versionName()}",
@@ -518,6 +536,24 @@ private val USAGE_TEXT = """
 
 【貼士】
 心誠則靈，一事一卦。同一件事短期內不宜重複占問。
+""".trimIndent()
+
+private val PRIVACY_TEXT = """
+【完全離線】
+・本應用未要求 INTERNET 權限，也不包含任何網路客戶端函式庫。
+・起卦、解析、卦庫查詢、書籍閱讀與小工具更新全部在本機完成；飛航模式下功能完整可用。
+
+【不傳送資料】
+・設定、書籍與閱讀進度存放於本機 DataStore 與 app 內部儲存（filesDir/books/）。
+・歷史紀錄僅存在於記憶體，最多 200 筆，結束行程後即清空；沒有任何遠端備份或分析服務。
+・詳情卡片導出是透過系統分享介面送出 PNG，由使用者自行決定分享對象。
+
+【無 AI、無外部依賴】
+・不接入任何 AI 模型、LLM、API 金鑰或訂閱服務。
+・PDF／DOC／DOCX／Markdown／純文字解析均以 JDK／Android 內建 API 自行實作，不引入第三方函式庫。
+
+【小工具】
+・桌面小工具以 Glance 在本機依時辰更新，不需要背景網路連線。
 """.trimIndent()
 
 private val LEGAL_TEXT = """

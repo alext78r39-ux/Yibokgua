@@ -1,6 +1,7 @@
 package com.masteryi.yibokgua.settings
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -20,7 +21,9 @@ data class Settings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val fontSizeScale: Float = 1.0f,
     val borderWidth: Float = 0.5f,
-    val keyboardScale: Float = 1.0f
+    val keyboardScale: Float = 1.0f,
+    /** 首次使用導覽是否已看過；預設為否，讓新使用者在起卦頁看到引導。 */
+    val onboardingSeen: Boolean = false
 )
 
 class SettingsRepository(private val context: Context) {
@@ -30,6 +33,7 @@ class SettingsRepository(private val context: Context) {
         val FONT_SIZE_SCALE = floatPreferencesKey("font_size_scale")
         val BORDER_WIDTH = floatPreferencesKey("border_width")
         val KEYBOARD_SCALE = floatPreferencesKey("keyboard_scale")
+        val ONBOARDING_SEEN = booleanPreferencesKey("onboarding_seen")
     }
 
     val settings: Flow<Settings> = context.settingsDataStore.data.map { prefs ->
@@ -39,7 +43,8 @@ class SettingsRepository(private val context: Context) {
             } ?: ThemeMode.SYSTEM,
             fontSizeScale = prefs[Keys.FONT_SIZE_SCALE] ?: 1.0f,
             borderWidth = prefs[Keys.BORDER_WIDTH] ?: 0.5f,
-            keyboardScale = prefs[Keys.KEYBOARD_SCALE] ?: 1.0f
+            keyboardScale = prefs[Keys.KEYBOARD_SCALE] ?: 1.0f,
+            onboardingSeen = prefs[Keys.ONBOARDING_SEEN] ?: false
         )
     }
 
@@ -64,6 +69,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun setKeyboardScale(scale: Float) {
         context.settingsDataStore.edit { prefs ->
             prefs[Keys.KEYBOARD_SCALE] = scale
+        }
+    }
+
+    suspend fun setOnboardingSeen(seen: Boolean) {
+        context.settingsDataStore.edit { prefs ->
+            prefs[Keys.ONBOARDING_SEEN] = seen
         }
     }
 

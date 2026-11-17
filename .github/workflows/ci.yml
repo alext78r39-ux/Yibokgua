@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 編譯 + 單元測試 + 除錯 APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 取出原始碼
+        uses: actions/checkout@v4
+
+      - name: 安裝 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: 設定 Gradle（含 wrapper 與快取）
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 移除本機專用的 aapt2 覆寫
+        # gradle.properties 的 /usr/bin/aapt2 是給特定 UNIX 開發環境使用的；
+        # CI 上沒有該檔案，移除後改由 AGP 使用 Maven 提供的 aapt2。
+        run: sed -i '/android.aapt2FromMavenOverride/d' gradle.properties
+
+      - name: 編譯、執行單元測試並產出除錯 APK
+        run: ./gradlew :app:compileDebugKotlin :app:testDebugUnitTest :app:assembleDebug --no-daemon
+
+      - name: 上傳單元測試報告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: app/build/reports/tests/testDebugUnitTest
+          if-no-files-found: warn
+
+      - name: 上傳除錯 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

@@ -114,6 +114,8 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onAutoOpenConsumed = { pendingDetailId = null },
                                 onRequestedTabConsumed = { pendingDivinationTab = null },
+                                onboardingSeen = settings.onboardingSeen,
+                                onOnboardingCompleted = { settingsViewModel.setOnboardingSeen(true) },
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -146,6 +148,8 @@ class MainActivity : ComponentActivity() {
                             },
                             onAutoOpenConsumed = { pendingDetailId = null },
                             onRequestedTabConsumed = { pendingDivinationTab = null },
+                            onboardingSeen = settings.onboardingSeen,
+                            onOnboardingCompleted = { settingsViewModel.setOnboardingSeen(true) },
                             modifier = Modifier.padding(innerPadding)
                         )
                     }
@@ -203,6 +207,8 @@ private fun MainScreenContent(
     onStartManualDivination: () -> Unit,
     onAutoOpenConsumed: () -> Unit,
     onRequestedTabConsumed: () -> Unit,
+    onboardingSeen: Boolean,
+    onOnboardingCompleted: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(modifier = modifier.fillMaxSize()) {
@@ -231,7 +237,9 @@ private fun MainScreenContent(
                     viewModel = viewModel,
                     onNavigateToDetail = onNavigateToDetail,
                     requestedTabIndex = pendingDivinationTab,
-                    onRequestedTabConsumed = onRequestedTabConsumed
+                    onRequestedTabConsumed = onRequestedTabConsumed,
+                    onboardingSeen = onboardingSeen,
+                    onOnboardingCompleted = onOnboardingCompleted
                 )
             }
         }

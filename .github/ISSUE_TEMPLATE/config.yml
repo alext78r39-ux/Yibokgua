@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 使用說明
+    url: https://github.com/alext78r39-ux/Yibokgua#readme
+    about: 先確認功能操作方式與設計定位（離線、無 AI）
+  - name: 貢獻指南
+    url: https://github.com/alext78r39-ux/Yibokgua/blob/master/CONTRIBUTING.md
+    about: 建置方式、驗證指令與 PR 流程

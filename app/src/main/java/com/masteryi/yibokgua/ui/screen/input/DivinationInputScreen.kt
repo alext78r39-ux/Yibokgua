@@ -34,6 +34,7 @@ import com.masteryi.core.model.iching.Trigram
 import com.masteryi.core.model.iching.TrigramInfo
 import com.masteryi.core.model.iching.Yao
 import com.masteryi.yibokgua.ui.components.AdaptiveScreen
+import com.masteryi.yibokgua.ui.components.OnboardingGuide
 import com.masteryi.yibokgua.ui.components.TrigramInfoDialog
 import com.masteryi.yibokgua.ui.components.TrigramPairSection
 import com.masteryi.yibokgua.ui.components.ZenCard
@@ -63,7 +64,9 @@ fun DivinationInputScreen(
     viewModel: DivinationViewModel,
     onNavigateToDetail: (Int) -> Unit,
     requestedTabIndex: Int? = null,
-    onRequestedTabConsumed: () -> Unit = {}
+    onRequestedTabConsumed: () -> Unit = {},
+    onboardingSeen: Boolean = true,
+    onOnboardingCompleted: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
@@ -121,6 +124,11 @@ fun DivinationInputScreen(
                 )
             }
         }
+    }
+
+    // 首次進入起卦頁時顯示五種方式的引導；看過後寫入 DataStore，不再打擾。
+    if (!onboardingSeen) {
+        OnboardingGuide(onComplete = onOnboardingCompleted)
     }
 }
 

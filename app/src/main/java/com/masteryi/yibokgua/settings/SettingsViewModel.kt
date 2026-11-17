@@ -31,6 +31,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { repository.setKeyboardScale(scale) }
     }
 
+    fun setOnboardingSeen(seen: Boolean) {
+        viewModelScope.launch { repository.setOnboardingSeen(seen) }
+    }
+
     fun reset() {
         viewModelScope.launch { repository.reset() }
     }

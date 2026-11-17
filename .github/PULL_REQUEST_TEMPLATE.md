@@ -7,7 +7,7 @@
 
 - [ ] `.\gradlew.bat :app:compileDebugKotlin` 通過
 - [ ] `.\gradlew.bat :app:testDebugUnitTest` 通過（目前 83 個測試）
-- [ ] 已確認沒有提交 `local.properties`、本機 SDK 路徑或 aapt2 暫時改動
+- [ ] 已確認沒有提交 `local.properties` 或本機 SDK 路徑
 - [ ] UI 字串與程式碼註解皆為繁體中文
 
 <!-- 若有手動驗證（例如實際在裝置上走過首次使用導覽），請簡述步驟與結果。 -->

@@ -31,11 +31,6 @@ jobs:
       - name: 設定 Gradle（含 wrapper 與快取）
         uses: gradle/actions/setup-gradle@v4
 
-      - name: 移除本機專用的 aapt2 覆寫
-        # gradle.properties 的 /usr/bin/aapt2 是給特定 UNIX 開發環境使用的；
-        # CI 上沒有該檔案，移除後改由 AGP 使用 Maven 提供的 aapt2。
-        run: sed -i '/android.aapt2FromMavenOverride/d' gradle.properties
-
       - name: 編譯、執行單元測試並產出除錯 APK
         run: ./gradlew :app:compileDebugKotlin :app:testDebugUnitTest :app:assembleDebug --no-daemon
 

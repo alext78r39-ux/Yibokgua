@@ -14,6 +14,9 @@
 - README 新增「設計定位：離線、隱私、無 AI」章節，並連結貢獻指南與變更紀錄。
 - 「關於易卜」對話框補充離線與無 AI 說明。
 
+### Fixed
+- 移除 `gradle.properties` 中寫死的 `android.aapt2FromMavenOverride=/usr/bin/aapt2`：Windows 上 Android Studio 同步與 Gradle 建置不再因找不到 Linux 路徑而失敗，改由 AGP 使用 Maven 提供的平台對應 aapt2。同時移除 CI 中不再需要的 `sed` 步驟，並更新 `AGENTS.md`／貢獻指南／PR 模板。
+
 ## [1.0.0] - 2026-11-18
 
 ### Added

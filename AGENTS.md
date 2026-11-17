@@ -1,12 +1,12 @@
 # AGENTS.md
 
-易經卜卦 Android app (易卜卦 / Yibokgua). Kotlin + Jetpack Compose, 4-module Gradle build (`:app`, `:core`, `:engine`, `:data`). No CI.
+易經卜卦 Android app (易卜卦 / Yibokgua). Kotlin + Jetpack Compose, 4-module Gradle build (`:app`, `:core`, `:engine`, `:data`). CI runs via GitHub Actions (`.github/workflows/ci.yml`) on push and PR to `master`.
 
 ## Build & verify
 - Toolchain: Gradle 8.13 wrapper, AGP 8.2.2, Kotlin 2.1.0, JDK 17; compileSdk/targetSdk 35, minSdk 26. `settings.gradle.kts` uses the foojay toolchain resolver.
 - Android SDK path comes from the gitignored `local.properties` (`sdk.dir=/opt/android_sdk`); recreate it if a fresh clone lacks it.
-- `gradle.properties` sets `android.aapt2FromMavenOverride=/usr/bin/aapt2`. Builds fail without this system aapt2 — do not remove it.
-- Commands:
+- `gradle.properties` does **not** set `android.aapt2FromMavenOverride`; AGP uses the platform-appropriate aapt2 from Maven (aapt2.exe on Windows). Never re-add a machine-specific absolute path — it breaks Android Studio sync and Gradle builds on other platforms.
+- Commands (use `.\gradlew.bat` instead of `./gradlew` on Windows):
   - `./gradlew :app:compileDebugKotlin` — fastest compile check
   - `./gradlew :app:testDebugUnitTest` — all unit tests
   - `./gradlew :app:testDebugUnitTest --tests "com.masteryi.yibokgua.DivinationEngineTest"` — one class
@@ -55,6 +55,6 @@ One-way deps; keep domain logic in its module, not in `:app`:
 
 ## Gotchas
 - `app/release-keystore.jks` is committed but not referenced by any `signingConfig`; release builds are currently unsigned.
-- Default branch is `master`. No CI, no branch protection.
+- Default branch is `master`. CI runs compile + 83 unit tests + debug APK via GitHub Actions; no branch protection.
 - `ui/export/DetailCardExport.kt`：Compose 需先附加至視窗才能建立 composition。現行做法是將透明 `ComposeView` 掛到 `android.R.id.content`，待首帧 (`OnPreDrawListener`) 後量測、繪製再移除；勿改回 detached 寫法（會丟 `IllegalStateException`）。
 - Material3 `DatePicker` 以 UTC 表示日期；轉 `LocalDate` 須用 `ZoneOffset.UTC`，用 `systemDefault()` 會位移一天。

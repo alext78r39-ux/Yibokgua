@@ -30,21 +30,11 @@ Windows 範例（注意反斜線要跳脫）：
 sdk.dir=C\:\\Users\\<你的使用者名稱>\\AppData\\Local\\Android\\Sdk
 ```
 
-### aapt2 已知問題
+### aapt2
 
-`gradle.properties` 中有一行給 UNIX 開發環境使用的設定：
+`gradle.properties` **不設定** `android.aapt2FromMavenOverride`，由 AGP 自動使用 Maven 提供的、與平台相符的 aapt2（Windows 上是 `aapt2.exe`）。因此 clone 後可直接同步／建置，不需任何額外設定。
 
-```properties
-android.aapt2FromMavenOverride=/usr/bin/aapt2
-```
-
-在 Windows 本機建置時，AGP 會找不到這個 UNIX 路徑而直接失敗。實測命令列 `-Pandroid.aapt2FromMavenOverride=...` **無法覆寫**此設定，因此請暫時修改 `gradle.properties`：
-
-```properties
-android.aapt2FromMavenOverride=C:/Users/<你>/AppData/Local/Android/Sdk/build-tools/34.0.0/aapt2.exe
-```
-
-建置完成後**務必改回 `/usr/bin/aapt2` 再提交**。CI 會自動移除這一行，改由 AGP 使用 Maven 提供的 aapt2，因此不需要（也不應該）把本機路徑提交進去。
+若你的本機 `gradle.properties` 仍有舊的 `android.aapt2FromMavenOverride=/usr/bin/aapt2`（或其他寫死的絕對路徑），請直接移除該行——它會讓 Android Studio 同步與 Gradle 建置在 Windows 上失敗。請勿把本機專用的 aapt2 路徑提交進版控。
 
 ---
 
@@ -99,7 +89,7 @@ android.aapt2FromMavenOverride=C:/Users/<你>/AppData/Local/Android/Sdk/build-to
 2. 每個 commit 聚焦一件事，訊息用繁體中文寫清楚「改了什麼、為什麼」。
 3. 送 PR 前請確認：
    - `.\gradlew.bat :app:compileDebugKotlin :app:testDebugUnitTest` 通過；
-   - 沒有把 `local.properties`、本機 SDK 路徑或 aapt2 暫時改动提交進去；
+   - 沒有把 `local.properties` 或本機 SDK 路徑提交進去；
    - UI 字串與註解皆是繁體中文；
    - 若有使用者可見的變化，更新 `CHANGELOG.md` 的 `[Unreleased]`。
 4. PR 描述請填寫模板中的「變更內容／驗證方式／影響範圍」。

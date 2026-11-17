@@ -134,7 +134,7 @@
 
 **說明**：Maven Central 與 Google Maven **不公開單一 artifact 的下載次數**（不同於 npm 有 npm downloads API），因此精確下載數與「隨時間的下載曲線」在本報告中標記為 `No data available`。上表以 GitHub 倉庫指標與 StackOverflow 問答時間序列作為「生態關注度隨時間變化」的替代指標。
 
-**專業提醒（可重現性風險）**：`gradle.properties` 依賴 `android.aapt2FromMavenOverride=/usr/bin/aapt2`，且 `local.properties` 的 SDK 路徑為本機路徑。這對外部貢獻者是**建置阻礙**——新人 clone 後無法直接 `./gradlew build`。DevRel 應把這段環境／bootstrap 流程寫進 README 或提供 init 腳本。
+**專業提醒（可重現性風險）**：研究時 `gradle.properties` 依賴 `android.aapt2FromMavenOverride=/usr/bin/aapt2`，且 `local.properties` 的 SDK 路徑為本機路徑，對外部貢獻者是**建置阻礙**——新人 clone 後無法直接 `./gradlew build`。**後續已修正**：aapt2 覆寫已移除（見附錄 P0 完成狀態），SDK 路徑設定方式則寫入 `CONTRIBUTING.md`。
 
 ---
 
@@ -212,6 +212,6 @@ GitHub 搜尋 `i ching android in:name,description` 共 **20** 個倉庫，頭�
 |---|---|---|
 | 首次使用導覽 | 已完成 | `ui/components/OnboardingGuide.kt`；五步驟、脈動微互動、DataStore 持久化 `onboardingSeen`；已接至 `MainActivity` → `DivinationInputScreen` |
 | 離線／隱私／無 AI 定位 | 已完成 | README「設計定位」章節；App 內「設定 → 說明 → 離線與隱私」對話框；「關於易卜」補充說明 |
-| 貢獻者入門 | 已完成 | `CONTRIBUTING.md`、`CHANGELOG.md`、issue／PR 模板、GitHub Actions CI（編譯 + 83 測試 + APK 產物）、本地 tag `v1.0.0`（未推送） |
+| 貢獻者入門 | 已完成 | `CONTRIBUTING.md`、`CHANGELOG.md`、issue／PR 模板、GitHub Actions CI（編譯 + 83 測試 + APK 產物）、已推送 tag `v1.0.0` 與 GitHub Release |
 
-驗證結果：`compileDebugKotlin + testDebugUnitTest + assembleDebug` 全部通過（14 套件／83 測試／0 失敗）。CI 會自動移除本機專用的 `aapt2FromMavenOverride`，故不需要把 Windows SDK 路徑提交進版控。
+驗證結果：`compileDebugKotlin + testDebugUnitTest + assembleDebug` 全部通過（14 套件／83 測試／0 失敗）。`gradle.properties` 中寫死的 `/usr/bin/aapt2` 覆寫已移除，由 AGP 使用 Maven 提供的平台對應 aapt2；CI 亦不再需要 `sed` 清理步驟，新人 clone 後可直接同步建置。
